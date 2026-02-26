@@ -420,6 +420,26 @@
       lucide.createIcons();
     }
 
+    // タイトルからキーワードを検知して自動でラベルを返す関数
+    function getAutoCategoryLabel(title) {
+      if (!title) return '';
+      // ここに好きなキーワードと色の設定を追加できます
+      const rules = [
+        { keywords: ['会議', 'mtg', 'ミーティング', '打合'], name: '会議', classes: 'bg-red-100 text-red-700 border-red-200' },
+        { keywords: ['開発', '実装', 'コード', 'バグ', '修正'], name: '開発', classes: 'bg-blue-100 text-blue-700 border-blue-200' },
+        { keywords: ['資料', '提案書', '作成'], name: '資料作成', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+        { keywords: ['連絡', 'メール', '電話', '確認'], name: '連絡・確認', classes: 'bg-amber-100 text-amber-700 border-amber-200' },
+        { keywords: ['重要', '至急'], name: '重要', classes: 'bg-purple-100 text-purple-700 border-purple-200 font-bold' }
+      ];
+
+      for (let rule of rules) {
+        if (rule.keywords.some(kw => title.toLowerCase().includes(kw))) {
+          return `<span class="text-[10px] px-2 py-0.5 border rounded-full ${rule.classes}">${rule.name}</span>`;
+        }
+      }
+      return ''; // 当てはまらない場合は何も出さない
+    }
+
     function setView(view) {
       currentView = view;
       const tabList = document.getElementById('tab-list');
@@ -458,7 +478,7 @@
                 <div>
                   <div class="flex items-center gap-2 mb-1">
                     <h3 class="font-bold text-gray-800 text-lg">${escapeHTML(task.title)}</h3>
-                    <span class="text-xs px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full">${getTypeLabel(task.type)}</span>
+                    ${getAutoCategoryLabel(task.title)} <span class="text-xs px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full">${getTypeLabel(task.type)}</span>
                   </div>
                   ${task.content ? `<p class="text-gray-600 text-sm">${escapeHTML(task.content)}</p>` : ''}
                 </div>
@@ -470,7 +490,8 @@
               </div>
               ${renderMemoLink(task.memo)}
             </div>
-            <div class="pt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <div class="pt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 flex gap-1">
+              <button onclick="openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-500 hover:bg-dusty-blue-50 rounded-md transition-colors"><i data-lucide="edit-2" class="w-4.5 h-4.5"></i></button>
               <button onclick="deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"><i data-lucide="trash-2" class="w-4.5 h-4.5"></i></button>
             </div>
           </div>
@@ -556,14 +577,18 @@
                 <button onclick="event.stopPropagation(); completeTask(${task.id})" class="mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors border-gray-300 text-transparent hover:border-dusty-blue-500 hover:text-dusty-blue-500"><i data-lucide="check" class="w-3 h-3" stroke-width="3"></i></button>
                 <div class="flex-1 min-w-0">
                   <div class="flex justify-between items-start gap-2">
-                    <h4 class="font-medium text-gray-800 text-base break-words">${escapeHTML(task.title)}</h4>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h4 class="font-medium text-gray-800 text-base break-words">${escapeHTML(task.title)}</h4>
+                      ${getAutoCategoryLabel(task.title)} </div>
                     ${timeString ? `<span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded shrink-0">${timeString}</span>` : ''}
                   </div>
                   ${task.content ? `<p class="text-sm text-gray-600 mt-1 break-words">${escapeHTML(task.content)}</p>` : ''}
                   ${renderMemoLink(task.memo)}
                 </div>
-                <button onclick="event.stopPropagation(); deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
+                <div class="flex flex-col gap-1 shrink-0">
+                  <button onclick="event.stopPropagation(); openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-500 hover:bg-dusty-blue-50 rounded-md transition-colors"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+                  <button onclick="event.stopPropagation(); deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
             </div>
           `;
         });
