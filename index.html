@@ -336,8 +336,11 @@
             await loadAllTasks();
           }
         }
-      });
+      }); // フォーム送信(submit)イベントの終わり
+    }); // DOMContentLoadedイベントの終わり
 
+    // --- データ取得ロジック ---
+    async function loadAllTasks() {
         // 1. 楽観的UI更新（画面に即座に反映）
         tasks.push(newTask);
         closeModal();
