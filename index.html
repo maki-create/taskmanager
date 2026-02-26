@@ -213,6 +213,7 @@
     let currentDate = new Date();
     let selectedDate = null;
     let isSyncing = false;
+    let editingTaskId = null;
 
     // --- APIラッパー ---
     async function fetchAPI(action, payload = {}) {
@@ -277,17 +278,65 @@
           }
         }
 
-        const newTask = {
-          id: Date.now(),
-          title,
-          content: document.getElementById('task-content').value,
-          dueDate,
-          type,
-          memo: document.getElementById('task-memo').value,
-          registerDate: getLocalIsoDateTime().slice(0, 10),
-          completed: false,
-          count: 0
-        };
+        // --- ここからが新規追加と編集の分岐 ---
+        if (editingTaskId) {
+          // ★ 編集モードの処理
+          const taskIndex = tasks.findIndex(t => t.id === editingTaskId);
+          if (taskIndex !== -1) {
+            // 画面上のデータを上書き
+            tasks[taskIndex].title = title;
+            tasks[taskIndex].content = document.getElementById('task-content').value;
+            tasks[taskIndex].dueDate = dueDate;
+            tasks[taskIndex].type = type;
+            tasks[taskIndex].memo = document.getElementById('task-memo').value;
+            
+            const updatedTask = tasks[taskIndex];
+            
+            // 画面を更新
+            closeModal();
+            updateApp();
+            if (selectedDate) renderDayDetailModalContent();
+            
+            // 裏でAPI送信（GASへ更新リクエスト）
+            try {
+              await fetchAPI('editTask', { task: updatedTask });
+              await fetchFromServer();
+            } catch (error) {
+              alert('更新に失敗しました。');
+              await loadAllTasks();
+            }
+          }
+        } else {
+          const newTask = {
+            id: Date.now(),
+            title,
+            content: document.getElementById('task-content').value,
+            dueDate,
+            type,
+            memo: document.getElementById('task-memo').value,
+            registerDate: getLocalIsoDateTime().slice(0, 10),
+            completed: false,
+            count: 0
+          };
+
+          // 画面にすぐ追加
+          tasks.push(newTask);
+          closeModal();
+          updateApp();
+          e.target.reset();
+          document.getElementById('task-type').value = 'specific';
+          handleTypeChange();
+          
+          // 裏でAPI送信（GASへ新規追加リクエスト）
+          try {
+            await fetchAPI('addTask', { task: newTask });
+            await fetchFromServer();
+          } catch (error) {
+            alert('登録に失敗しました。画面をリロードします。');
+            await loadAllTasks();
+          }
+        }
+      });
 
         // 1. 楽観的UI更新（画面に即座に反映）
         tasks.push(newTask);
@@ -597,7 +646,45 @@
       lucide.createIcons();
     }
 
-    function openModal() { document.getElementById('add-modal').classList.remove('hidden'); }
+ function openModal() { 
+      editingTaskId = null;
+      document.getElementById('add-task-form').reset();
+      document.querySelector('#add-modal h2').textContent = '新規タスクの追加';
+      document.getElementById('submit-btn').textContent = '登録する';
+      document.getElementById('task-dueDate-specific').value = getLocalIsoDateTime();
+      handleTypeChange();
+      document.getElementById('add-modal').classList.remove('hidden'); 
+    }
+
+    function openEditModal(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      
+      editingTaskId = id;
+      document.querySelector('#add-modal h2').textContent = 'タスクの編集';
+      document.getElementById('submit-btn').textContent = '保存する';
+      
+      // フォームに値をセット
+      document.getElementById('task-title').value = task.title || '';
+      document.getElementById('task-content').value = task.content || '';
+      document.getElementById('task-type').value = task.type || 'specific';
+      document.getElementById('task-memo').value = task.memo || '';
+      
+      handleTypeChange();
+      
+      // 日付のセット
+      if (task.type === 'specific') {
+        document.getElementById('task-dueDate-specific').value = task.dueDate;
+      } else {
+        // 繰り返しの場合は特定日時指定ラジオボタンをオンにする
+        document.querySelector('input[name="dueDateOption"][value="exact"]').checked = true;
+        handleDueDateOptionChange();
+        document.getElementById('task-dueDate-recurring').value = task.dueDate;
+      }
+      
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+
     function closeModal() { document.getElementById('add-modal').classList.add('hidden'); }
 
     // --- フォーマット関数 ---
