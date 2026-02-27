@@ -336,28 +336,8 @@
             await loadAllTasks();
           }
         }
-      }); // フォーム送信(submit)イベントの終わり
-    }); // DOMContentLoadedイベントの終わり
-
-    // --- データ取得ロジック ---
-    async function loadAllTasks() {
-        // 1. 楽観的UI更新（画面に即座に反映）
-        tasks.push(newTask);
-        closeModal();
-        updateApp();
-        e.target.reset();
-        document.getElementById('task-type').value = 'specific';
-        handleTypeChange();
-        
-        // 2. 裏でAPI送信
-        try {
-          await fetchAPI('addTask', { task: newTask });
-          await fetchFromServer(); // 成功したら念の為最新を再取得
-        } catch (error) {
-          alert('登録に失敗しました。画面をリロードします。');
-          await loadAllTasks();
-        }
-      };
+      });
+    }); 
 
 
     // --- データ取得ロジック ---
@@ -640,6 +620,7 @@
                 <div class="flex flex-col gap-1 shrink-0">
                   <button onclick="event.stopPropagation(); openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-500 hover:bg-dusty-blue-50 rounded-md transition-colors"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                   <button onclick="event.stopPropagation(); deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
                 </div>
             </div>
           `;
