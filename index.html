@@ -411,6 +411,26 @@
       return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
     };
 
+    // モーダルを開く処理
+    function openModal() {
+      document.getElementById('add-modal').classList.remove('hidden');
+      
+      // 開いたときに今日の日付をセットしておく（親切設計）
+      const nowIso = getLocalIsoDateTime();
+      document.getElementById('task-dueDate-specific').value = nowIso;
+      document.getElementById('task-dueDate-recurring').value = nowIso;
+    }
+
+    // モーダルを閉じる処理
+    function closeModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+      
+      // 閉じたときにフォームの中身をリセットする
+      document.getElementById('add-task-form').reset();
+      document.getElementById('task-type').value = 'specific';
+      handleTypeChange();
+    }
+
     function handleTypeChange() {
       const type = document.getElementById('task-type').value;
       const sectionSpecific = document.getElementById('dueDate-section-specific');
