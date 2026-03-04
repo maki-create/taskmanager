@@ -9,12 +9,12 @@
     {
       "src": "アイコン.png",
       "sizes": "192x192",
-      "type": "icon/png"
+      "type": "image/png"
     },
     {
       "src": "アイコン.png",
       "sizes": "512x512",
-      "type": "icon/png"
+      "type": "image/png"
     }
   ]
 }
