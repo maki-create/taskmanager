@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Task Manager </title>
+  <title>Task Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,69 +23,75 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .category-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    
+    .calendar-cell { min-height: 100px; }
+    @media (max-width: 640px) {
+      .calendar-cell { min-height: 80px; }
+    }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-24 min-h-screen">
 
-  <header class="bg-white shadow-sm sticky top-0 z-10 px-4 py-3">
-    <div class="max-w-3xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <h1 class="text-lg sm:text-xl font-bold text-dusty-blue-700 flex items-center gap-2">
-          <i data-lucide="check-square" class="w-6 h-6"></i> タスク管理
-        </h1>
+  <header class="bg-white shadow-sm sticky top-0 z-10 px-4 py-2">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <!-- JSから書き換えるID: header-date -->
+        <div id="header-date" class="text-base sm:text-lg font-bold text-dusty-blue-800 tracking-tight"></div>
         <div id="sync-indicator" class="spinner hidden"></div>
       </div>
       
       <div class="flex items-center gap-2">
-        <button onclick="openCategoryModal()" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="カテゴリ管理">
+        <button onclick="openCategoryModal()" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
           <i data-lucide="tag" class="w-5 h-5"></i>
         </button>
 
         <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-          <button id="tab-calendar" onclick="setView('calendar')" class="flex items-center gap-1 px-2 sm:px-4 py-1.5 rounded-md text-[10px] sm:text-sm font-bold transition-colors whitespace-nowrap">
-            <i data-lucide="calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i> カレンダー
+          <button id="tab-calendar" onclick="setView('calendar')" class="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-colors">
+            <i data-lucide="calendar" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">カレンダー</span>
           </button>
-          <button id="tab-list" onclick="setView('list')" class="flex items-center gap-1 px-2 sm:px-4 py-1.5 rounded-md text-[10px] sm:text-sm font-bold transition-colors whitespace-nowrap">
-            <i data-lucide="list" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i> リスト
+          <button id="tab-list" onclick="setView('list')" class="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-colors">
+            <i data-lucide="list" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">リスト</span>
           </button>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-3xl mx-auto px-4 mt-6">
+  <main class="max-w-4xl mx-auto px-2 sm:px-4 mt-4">
+    <!-- カレンダーコンテナ -->
     <div id="calendar-container">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="p-4 flex justify-between items-center border-b border-gray-100">
-          <button onclick="prevMonth()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+      <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div class="p-2 flex justify-between items-center bg-gray-50 border-b border-gray-100">
+          <button onclick="prevMonth()" class="p-2 hover:bg-gray-200 rounded-full text-gray-600 transition-colors">
             <i data-lucide="chevron-left" class="w-5 h-5"></i>
           </button>
-          <h2 id="calendar-title" class="text-lg font-bold text-gray-800"></h2>
-          <button onclick="nextMonth()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+          <button onclick="currentDate = new Date(); renderApp();" class="text-xs px-3 py-1 bg-white border border-gray-200 rounded-md shadow-sm font-bold text-gray-600 active:scale-95 transition-transform">今日</button>
+          <button onclick="nextMonth()" class="p-2 hover:bg-gray-200 rounded-full text-gray-600 transition-colors">
             <i data-lucide="chevron-right" class="w-5 h-5"></i>
           </button>
         </div>
         
-        <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-100">
-          <div class="py-2 text-center text-xs font-medium text-red-500">日</div>
-          <div class="py-2 text-center text-xs font-medium text-gray-500">月</div>
-          <div class="py-2 text-center text-xs font-medium text-gray-500">火</div>
-          <div class="py-2 text-center text-xs font-medium text-gray-500">水</div>
-          <div class="py-2 text-center text-xs font-medium text-gray-500">木</div>
-          <div class="py-2 text-center text-xs font-medium text-gray-500">金</div>
-          <div class="py-2 text-center text-xs font-medium text-dusty-blue-500">土</div>
+        <div class="grid grid-cols-7 bg-white border-b border-gray-100">
+          <div class="py-2 text-center text-[10px] font-bold text-red-500">日</div>
+          <div class="py-2 text-center text-[10px] font-bold text-gray-400">月</div>
+          <div class="py-2 text-center text-[10px] font-bold text-gray-400">火</div>
+          <div class="py-2 text-center text-[10px] font-bold text-gray-400">水</div>
+          <div class="py-2 text-center text-[10px] font-bold text-gray-400">木</div>
+          <div class="py-2 text-center text-[10px] font-bold text-gray-400">金</div>
+          <div class="py-2 text-center text-[10px] font-bold text-blue-500">土</div>
         </div>
         <div id="calendar-grid" class="grid grid-cols-7"></div>
       </div>
     </div>
 
+    <!-- リストコンテナ -->
     <div id="list-container" class="hidden">
-      <div id="tabs-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4 border-b border-gray-200"></div>
+      <div id="tabs-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4"></div>
       <div id="view-list" class="space-y-3"></div>
     </div>
   </main>
 
+  <!-- モーダル群 (詳細、追加、カテゴリ) -->
   <div id="day-detail-modal" class="hidden fixed inset-0 z-30 flex flex-col justify-end">
     <div id="day-detail-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="closeDayDetailModal()"></div>
     <div id="day-detail-sheet" class="relative bg-white rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden flex flex-col max-h-[85vh] transform translate-y-full transition-transform duration-300 ease-out">
@@ -155,7 +161,7 @@
       </div>
       <div class="p-4 space-y-4">
         <div class="flex gap-2">
-          <input type="text" id="new-cat-name" placeholder="新しいカテゴリ名" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
+          <input type="text" id="new-cat-name" placeholder="名" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
           <input type="color" id="new-cat-color" value="#6a9db6" class="w-10 h-10 p-0.5 border border-gray-300 rounded-lg bg-white">
           <button onclick="addCategory()" class="px-3 bg-dusty-blue-500 text-white rounded-lg text-sm font-bold">追加</button>
         </div>
@@ -282,7 +288,6 @@
         type: document.getElementById('task-type').value,
         dueDate: document.getElementById('task-dueDate').value,
         memo: document.getElementById('task-memo').value,
-        content: '',
       };
       if (editingTaskId) {
         const idx = tasks.findIndex(t => t.id === editingTaskId);
@@ -294,7 +299,7 @@
           await loadAllData();
         }
       } else {
-        const newTask = { id: Date.now(), registerDate: new Date().toISOString().slice(0, 10), completed: false, count: 0, ...newTaskData };
+        const newTask = { id: Date.now(), registerDate: new Date().toISOString().slice(0, 10), completed: false, ...newTaskData };
         tasks.push(newTask);
         closeModal(); renderApp();
         await fetchAPI('addTask', { task: newTask });
@@ -319,7 +324,6 @@
         localStorage.setItem('task_manager_categories', JSON.stringify(categories));
         updateCategoryUI();
         renderApp();
-        if (selectedDateStr) renderDayDetailModalContent();
       }
     }
 
@@ -356,18 +360,24 @@
       const isList = currentView === 'list';
       document.getElementById('list-container').classList.toggle('hidden', !isList);
       document.getElementById('calendar-container').classList.toggle('hidden', isList);
+      
       const tabList = document.getElementById('tab-list');
       const tabCal = document.getElementById('tab-calendar');
       const active = "bg-white shadow-sm text-dusty-blue-600";
       const inactive = "text-gray-500 hover:text-gray-700";
+
+      // ヘッダー年月の更新
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+      document.getElementById('header-date').textContent = `${year}年 ${month}月`;
       
       if (isList) {
-        tabList.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${active}`;
-        tabCal.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${inactive}`;
+        tabList.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${active}`;
+        tabCal.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${inactive}`;
         renderTabs(); renderList();
       } else {
-        tabCal.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${active}`;
-        tabList.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${inactive}`;
+        tabCal.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${active}`;
+        tabList.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${inactive}`;
         renderCalendar();
       }
       lucide.createIcons();
@@ -388,7 +398,7 @@
       container.innerHTML = tabsData.map(tab => {
         const isActive = currentFilter === tab.id;
         const color = tab.isAlert ? (isActive ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600 border-red-200') : (isActive ? 'bg-dusty-blue-600 text-white' : 'bg-white text-gray-600 border-gray-200');
-        return `<button onclick="currentFilter='${tab.id}'; renderApp();" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border flex items-center gap-1.5 transition-all ${color}">${tab.label} ${tab.count > 0 ? `<span class="px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white text-current' : 'bg-gray-200'}">${tab.count}</span>` : ''}</button>`;
+        return `<button onclick="currentFilter='${tab.id}'; renderApp();" class="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border flex items-center gap-1 transition-all ${color}">${tab.label} ${tab.count > 0 ? `<span class="px-1.5 py-0.5 rounded-full text-[9px] ${isActive ? 'bg-white text-current' : 'bg-gray-200'}">${tab.count}</span>` : ''}</button>`;
       }).join('');
     }
 
@@ -409,7 +419,7 @@
       if (task.dueDate) {
         const s = getTaskStatus(task.dueDate);
         const color = s === 'overdue' ? 'bg-red-50 text-red-600 border-red-100' : (s === 'today' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-700 border-green-100');
-        dueDateHtml = `<div class="text-[11px] px-2 py-0.5 rounded border font-bold ${color}">${formatDateTime(task.dueDate)}</div>`;
+        dueDateHtml = `<div class="text-[10px] px-1.5 py-0.5 rounded border font-bold ${color}">${formatDateTime(task.dueDate)}</div>`;
       }
       const cat = (categories || []).find(c => c.name === task.category) || { name: '未分類', color: '#999' };
       return `
@@ -424,7 +434,7 @@
               <span class="text-[10px] px-2 py-0.5 border rounded-full font-medium" style="background-color: ${cat.color}20; border-color: ${cat.color}40; color: ${cat.color}">${task.category || '未分類'}</span>
               ${task.type !== 'specific' ? `<span class="text-[10px] px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full font-bold">繰り返し</span>` : ''}
             </div>
-            ${task.memo ? `<div class="text-xs text-gray-500 mt-1 p-2 bg-gray-50 rounded-lg">${escapeHTML(task.memo)}</div>` : ''}
+            ${task.memo ? `<div class="text-xs text-gray-500 mt-1 p-2 bg-gray-50 rounded-lg whitespace-pre-wrap">${escapeHTML(task.memo)}</div>` : ''}
           </div>
           <div class="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100">
             <button onclick="openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
@@ -435,18 +445,20 @@
 
     function renderCalendar() {
       const year = currentDate.getFullYear(), month = currentDate.getMonth();
-      document.getElementById('calendar-title').textContent = `${year}年 ${month + 1}月`;
       const firstDay = new Date(year, month, 1).getDay();
       const lastDate = new Date(year, month + 1, 0).getDate();
       const todayStr = getLocalIsoDateTime().slice(0, 10);
       let html = '';
-      for (let i = 0; i < firstDay; i++) html += `<div class="bg-gray-50/50 min-h-[90px] border-b border-r border-gray-100"></div>`;
+      
+      for (let i = 0; i < firstDay; i++) html += `<div class="bg-gray-50/50 calendar-cell border-b border-r border-gray-100"></div>`;
+      
       for (let i = 1; i <= lastDate; i++) {
         const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
         const dayTasks = (tasks || []).filter(t => t.dueDate && t.dueDate.startsWith(dStr));
         const isToday = dStr === todayStr;
+        
         html += `
-          <div onclick="selectDate('${dStr}')" class="p-1 border-b border-r border-gray-100 min-h-[90px] hover:bg-dusty-blue-50 cursor-pointer transition-colors overflow-hidden">
+          <div onclick="selectDate('${dStr}')" class="p-1 border-b border-r border-gray-100 calendar-cell hover:bg-dusty-blue-50 cursor-pointer transition-colors overflow-hidden">
             <span class="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-dusty-blue-500 text-white' : 'text-gray-500'}">${i}</span>
             <div class="mt-1 space-y-0.5">
               ${dayTasks.slice(0, 3).map(t => {
@@ -508,8 +520,7 @@
       document.getElementById('task-title').value = task.title || '';
       document.getElementById('task-category').value = task.category || (categories[0] ? categories[0].name : '');
       document.getElementById('task-type').value = task.type || 'specific';
-      const dInput = document.getElementById('task-dueDate');
-      if (task.dueDate) dInput.value = task.dueDate.slice(0, 16);
+      if (task.dueDate) document.getElementById('task-dueDate').value = task.dueDate.slice(0, 16);
       document.getElementById('task-memo').value = task.memo || '';
       document.getElementById('add-modal').classList.remove('hidden');
     }
