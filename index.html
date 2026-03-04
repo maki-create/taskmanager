@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Task Manager</title>
+  <title>Task Manager </title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -23,6 +23,7 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .category-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans pb-24 min-h-screen">
@@ -33,35 +34,35 @@
         <h1 class="text-lg sm:text-xl font-bold text-dusty-blue-700 flex items-center gap-2">
           <i data-lucide="check-square" class="w-6 h-6"></i> タスク管理
         </h1>
-        <div id="sync-indicator" class="spinner hidden" title="同期中..."></div>
+        <div id="sync-indicator" class="spinner hidden"></div>
       </div>
       
-      <div class="flex bg-gray-100 p-1 rounded-lg">
-        <button id="tab-list" onclick="setView('list')" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors bg-white shadow-sm text-dusty-blue-600">
-          <i data-lucide="list" class="w-4 h-4"></i> リスト
+      <div class="flex items-center gap-2">
+        <button onclick="openCategoryModal()" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors" title="カテゴリ管理">
+          <i data-lucide="tag" class="w-5 h-5"></i>
         </button>
-        <button id="tab-calendar" onclick="setView('calendar')" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors text-gray-500 hover:text-gray-700">
-          <i data-lucide="calendar" class="w-4 h-4"></i> カレンダー
-        </button>
+
+        <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
+          <button id="tab-calendar" onclick="setView('calendar')" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors">
+            <i data-lucide="calendar" class="w-4 h-4"></i> カレンダー
+          </button>
+          <button id="tab-list" onclick="setView('list')" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors">
+            <i data-lucide="list" class="w-4 h-4"></i> リスト
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
   <main class="max-w-3xl mx-auto px-4 mt-6">
-    <div id="list-container">
-      <div id="tabs-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4 border-b border-gray-200">
-        </div>
-      <div id="view-list" class="space-y-3"></div>
-    </div>
-
-    <div id="calendar-container" class="hidden">
+    <div id="calendar-container">
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-4 flex justify-between items-center border-b border-gray-100">
-          <button onclick="prevMonth()" class="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+          <button onclick="prevMonth()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600">
             <i data-lucide="chevron-left" class="w-5 h-5"></i>
           </button>
           <h2 id="calendar-title" class="text-lg font-bold text-gray-800"></h2>
-          <button onclick="nextMonth()" class="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
+          <button onclick="nextMonth()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600">
             <i data-lucide="chevron-right" class="w-5 h-5"></i>
           </button>
         </div>
@@ -75,61 +76,54 @@
           <div class="py-2 text-center text-xs font-medium text-gray-500">金</div>
           <div class="py-2 text-center text-xs font-medium text-dusty-blue-500">土</div>
         </div>
-        
         <div id="calendar-grid" class="grid grid-cols-7"></div>
       </div>
     </div>
+
+    <div id="list-container" class="hidden">
+      <div id="tabs-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4 border-b border-gray-200"></div>
+      <div id="view-list" class="space-y-3"></div>
+    </div>
   </main>
 
-  <div id="day-detail-modal" class="hidden fixed inset-0 z-30 flex flex-col justify-end" onclick="closeDayDetailModal()">
-    <div id="day-detail-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
-    <div id="day-detail-sheet" class="relative bg-white rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden flex flex-col max-h-[85vh] transform translate-y-full transition-transform duration-300 ease-out" onclick="event.stopPropagation()">
-      <div class="w-full flex justify-center pt-3 pb-2 bg-gray-50 cursor-pointer" onclick="closeDayDetailModal()">
-        <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+  <div id="day-detail-modal" class="hidden fixed inset-0 z-30 flex flex-col justify-end">
+    <div id="day-detail-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="closeDayDetailModal()"></div>
+    <div id="day-detail-sheet" class="relative bg-white rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden flex flex-col max-h-[85vh] transform translate-y-full transition-transform duration-300 ease-out">
+      <div class="w-full flex justify-center pt-3 pb-2 bg-white cursor-pointer" onclick="closeDayDetailModal()">
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
       </div>
-      <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-gray-50">
-        <h3 id="day-detail-title" class="font-bold text-gray-800 flex items-center gap-2"></h3>
-        <button onclick="closeDayDetailModal()" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors">
-          <i data-lucide="x" class="w-5 h-5"></i>
+      <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-white">
+        <h3 id="day-detail-title" class="font-bold text-gray-800 text-lg"></h3>
+        <button onclick="openModalFromCalendar()" class="p-1.5 text-dusty-blue-600 hover:bg-dusty-blue-50 rounded-full">
+          <i data-lucide="plus" class="w-6 h-6"></i>
         </button>
       </div>
-      <div id="day-detail-content" class="p-4 overflow-y-auto bg-gray-50 pb-12 no-scrollbar">
-      </div>
+      <div id="day-detail-content" class="p-4 overflow-y-auto bg-gray-50 flex-1 no-scrollbar pb-10"></div>
     </div>
   </div>
-
-  <button onclick="openModal()" class="fixed bottom-8 right-8 w-14 h-14 bg-dusty-blue-500 hover:bg-dusty-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-20">
-    <i data-lucide="plus" class="w-7 h-7"></i>
-  </button>
 
   <div id="add-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
     <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
       <div class="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
-        <h2 id="modal-title" class="text-lg font-bold text-gray-800">新規タスク</h2>
-        <button onclick="closeModal()" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors">
+        <h2 id="modal-title" class="text-lg font-bold text-gray-800">タスク</h2>
+        <button onclick="closeModal()" class="p-1.5 text-gray-400 hover:bg-gray-200 rounded-full">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
-
       <div class="p-5 overflow-y-auto no-scrollbar bg-white">
         <form id="add-task-form" class="space-y-5">
           <div>
-            <label class="block text-sm font-bold text-gray-700 mb-1">やること <span class="text-red-500">*</span></label>
-            <input type="text" id="task-title" required placeholder="例: 提案書の作成" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none transition-all">
+            <label class="block text-sm font-bold text-gray-700 mb-1">内容 <span class="text-red-500">*</span></label>
+            <input type="text" id="task-title" required placeholder="何をする？" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none">
           </div>
-          
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-bold text-gray-700 mb-1">カテゴリ</label>
-              <select id="task-category" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none bg-white text-gray-700">
-                <option value="その他">未分類 (その他)</option>
-                <option value="仕事">仕事</option>
-                <option value="日常">日常</option>
-              </select>
+              <select id="task-category" class="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-gray-700"></select>
             </div>
             <div>
               <label class="block text-sm font-bold text-gray-700 mb-1">繰り返し</label>
-              <select id="task-type" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none bg-white text-gray-700">
+              <select id="task-type" onchange="handleTaskTypeChange()" class="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-gray-700">
                 <option value="specific">1回のみ</option>
                 <option value="daily">毎日</option>
                 <option value="weekly">毎週</option>
@@ -137,40 +131,62 @@
               </select>
             </div>
           </div>
-
           <div>
-            <label class="block text-sm font-bold text-gray-700 mb-1">期日 <span class="text-xs font-normal text-gray-400">(任意)</span></label>
-            <input type="datetime-local" id="task-dueDate" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none">
-            <p class="text-xs text-gray-500 mt-1">※時間を指定しない場合は「23:59」とするのがおすすめです。</p>
+            <label class="block text-sm font-bold text-gray-700 mb-1">期日 <span id="due-date-required-mark" class="text-red-500">*</span></label>
+            <input type="datetime-local" id="task-dueDate" class="w-full p-2.5 border border-gray-300 rounded-lg">
           </div>
-
           <div>
-            <label class="block text-sm font-bold text-gray-700 mb-1">メモ / 内容</label>
-            <textarea id="task-memo" rows="3" placeholder="補足情報やURLなど" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none resize-none"></textarea>
+            <label class="block text-sm font-bold text-gray-700 mb-1">メモ</label>
+            <textarea id="task-memo" rows="2" class="w-full p-2.5 border border-gray-300 rounded-lg resize-none"></textarea>
           </div>
         </form>
       </div>
-
       <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-        <button type="button" onclick="closeModal()" class="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100">キャンセル</button>
-        <button type="submit" id="submit-btn" form="add-task-form" class="px-5 py-2.5 text-sm font-medium text-white bg-dusty-blue-500 rounded-lg hover:bg-dusty-blue-600 shadow-sm">保存する</button>
+        <button type="submit" form="add-task-form" class="px-5 py-2.5 text-sm font-medium text-white bg-dusty-blue-500 rounded-lg">保存</button>
       </div>
     </div>
   </div>
 
+  <div id="category-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100">
+        <h2 class="text-lg font-bold text-gray-800">カテゴリ管理</h2>
+        <button onclick="closeCategoryModal()" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div class="flex gap-2">
+          <input type="text" id="new-cat-name" placeholder="新しいカテゴリ名" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
+          <input type="color" id="new-cat-color" value="#6a9db6" class="w-10 h-10 p-0.5 border border-gray-300 rounded-lg bg-white">
+          <button onclick="addCategory()" class="px-3 bg-dusty-blue-500 text-white rounded-lg text-sm font-bold">追加</button>
+        </div>
+        <div id="category-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+      </div>
+      <div class="p-4 bg-gray-50 text-right">
+        <button onclick="closeCategoryModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <button onclick="openModal()" class="fixed bottom-8 right-8 w-14 h-14 bg-dusty-blue-500 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-20">
+    <i data-lucide="plus" class="w-7 h-7"></i>
+  </button>
+
   <script>
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyNJU9XMMYJOBD_E7412_yNHtGNI4CyaU9jKL3w6nD6iK7L2kDFUoAohoXGZEC9aSbbWg/exec';
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyIKtv1UervjNT3x6-_lXXuDHyE7tXerPpsOzB0eXP1GiFThVjN4fx6AnijpqkvdsZ1Sw/exec';
     
-    // --- 状態管理 ---
     let tasks = [];
+    let categories = [
+      { name: '仕事', color: '#3b82f6' },
+      { name: '日常', color: '#10b981' },
+      { name: 'その他', color: '#6b7280' }
+    ];
     let isSyncing = false;
     let editingTaskId = null;
-    let currentFilter = 'today'; // リスト側のタブ
-    let currentView = 'list';    // 全体のビュー（list or calendar）
-    let currentDate = new Date(); // カレンダー表示用の年月
-    let selectedDate = null;      // カレンダーで選択した日付
+    let currentFilter = 'today';
+    let currentView = 'calendar';
+    let currentDate = new Date();
+    let selectedDateStr = null;
 
-    // --- APIラッパー ---
     async function fetchAPI(action, payload = {}) {
       setSyncing(true);
       try {
@@ -181,178 +197,186 @@
         const json = await res.json();
         if (json.status === 'error') throw new Error(json.message);
         return json.data;
-      } finally {
-        setSyncing(false);
-      }
+      } catch (err) {
+        console.error("API Error:", err);
+        return null;
+      } finally { setSyncing(false); }
     }
 
     function setSyncing(status) {
       isSyncing = status;
-      document.getElementById('sync-indicator').classList.toggle('hidden', !status);
+      const el = document.getElementById('sync-indicator');
+      if (el) el.classList.toggle('hidden', !status);
     }
 
-    // --- 初期化 ---
+    function updateCategoryUI() {
+      const select = document.getElementById('task-category');
+      if (!select) return;
+      select.innerHTML = (categories || []).map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      
+      const list = document.getElementById('category-list');
+      if (!list) return;
+      list.innerHTML = (categories || []).map((c, i) => `
+        <div class="flex items-center justify-between p-2 bg-white border border-gray-100 rounded-lg shadow-sm">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded-full" style="background-color: ${c.color}"></div>
+            <span class="text-sm font-medium">${escapeHTML(c.name)}</span>
+          </div>
+          ${categories.length > 1 ? `<button onclick="removeCategory(${i})" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    async function addCategory() {
+      const name = document.getElementById('new-cat-name').value.trim();
+      const color = document.getElementById('new-cat-color').value;
+      if (!name) return;
+      if (categories.some(c => c.name === name)) { alert('既に存在します'); return; }
+      categories.push({ name, color });
+      updateCategoryUI();
+      document.getElementById('new-cat-name').value = '';
+      renderApp();
+      await fetchAPI('updateCategories', { categories });
+    }
+
+    async function removeCategory(index) {
+      if (!confirm('カテゴリを削除しますか？')) return;
+      categories.splice(index, 1);
+      updateCategoryUI();
+      renderApp();
+      await fetchAPI('updateCategories', { categories });
+    }
+
+    function openCategoryModal() { document.getElementById('category-modal').classList.remove('hidden'); }
+    function closeCategoryModal() { document.getElementById('category-modal').classList.add('hidden'); }
+
     document.addEventListener('DOMContentLoaded', () => {
-      loadAllTasks();
-
-      document.getElementById('add-task-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = document.getElementById('task-title').value.trim();
-        if (!title) return;
-
-        const newTaskData = {
-          title: title,
-          category: document.getElementById('task-category').value,
-          type: document.getElementById('task-type').value,
-          dueDate: document.getElementById('task-dueDate').value,
-          memo: document.getElementById('task-memo').value,
-          content: '', 
-        };
-
-        if (editingTaskId) {
-          const taskIndex = tasks.findIndex(t => t.id === editingTaskId);
-          if (taskIndex !== -1) {
-            Object.assign(tasks[taskIndex], newTaskData);
-            closeModal();
-            renderApp();
-            if (selectedDate) renderDayDetailModalContent();
-            
-            try {
-              await fetchAPI('editTask', { task: tasks[taskIndex] });
-              await fetchFromServer();
-            } catch (error) {
-              alert('更新に失敗しました。');
-              await loadAllTasks();
-            }
-          }
-        } else {
-          const newTask = {
-            id: Date.now(),
-            registerDate: new Date().toISOString().slice(0, 10),
-            completed: false,
-            count: 0,
-            ...newTaskData
-          };
-
-          tasks.push(newTask);
-          closeModal();
-          renderApp();
-          
-          try {
-            await fetchAPI('addTask', { task: newTask });
-            await fetchFromServer();
-          } catch (error) {
-            alert('登録に失敗しました。');
-            await loadAllTasks();
-          }
-        }
-      });
+      loadAllData();
+      document.getElementById('add-task-form').addEventListener('submit', handleTaskSubmit);
     });
 
-    async function loadAllTasks() {
-      const cached = localStorage.getItem('task_manager_cache');
-      if (cached) {
-        try { tasks = JSON.parse(cached); renderApp(); } catch(e){}
+    function handleTaskTypeChange() {
+      const type = document.getElementById('task-type').value;
+      const dueDateInput = document.getElementById('task-dueDate');
+      const requiredMark = document.getElementById('due-date-required-mark');
+      if (type === 'specific') {
+        dueDateInput.required = true; requiredMark.classList.remove('hidden');
+      } else {
+        dueDateInput.required = false; requiredMark.classList.add('hidden');
+        let targetDate = new Date();
+        if (type === 'weekly') targetDate.setDate(targetDate.getDate() + 7);
+        else if (type === 'monthly') targetDate.setMonth(targetDate.getMonth() + 1);
+        targetDate.setHours(23, 59, 0, 0);
+        dueDateInput.value = getLocalIsoDateTime(targetDate);
       }
-      await fetchFromServer();
     }
 
-    async function fetchFromServer() {
-      try {
-        const serverTasks = await fetchAPI('getTasks');
-        tasks = serverTasks;
+    async function handleTaskSubmit(e) {
+      e.preventDefault();
+      const title = document.getElementById('task-title').value.trim();
+      if (!title) return;
+      const newTaskData = {
+        title: title,
+        category: document.getElementById('task-category').value,
+        type: document.getElementById('task-type').value,
+        dueDate: document.getElementById('task-dueDate').value,
+        memo: document.getElementById('task-memo').value,
+        content: '',
+      };
+      if (editingTaskId) {
+        const idx = tasks.findIndex(t => t.id === editingTaskId);
+        if (idx !== -1) {
+          tasks[idx] = { ...tasks[idx], ...newTaskData };
+          closeModal(); renderApp();
+          if (selectedDateStr) renderDayDetailModalContent();
+          await fetchAPI('editTask', { task: tasks[idx] });
+          await loadAllData();
+        }
+      } else {
+        const newTask = { id: Date.now(), registerDate: new Date().toISOString().slice(0, 10), completed: false, count: 0, ...newTaskData };
+        tasks.push(newTask);
+        closeModal(); renderApp();
+        await fetchAPI('addTask', { task: newTask });
+        await loadAllData();
+      }
+    }
+
+    async function loadAllData() {
+      const cachedTasks = localStorage.getItem('task_manager_cache');
+      const cachedCats = localStorage.getItem('task_manager_categories');
+      if (cachedTasks) tasks = JSON.parse(cachedTasks);
+      if (cachedCats) categories = JSON.parse(cachedCats);
+      
+      updateCategoryUI();
+      renderApp();
+      
+      const serverData = await fetchAPI('getTasks');
+      if (serverData) {
+        tasks = serverData.tasks || [];
+        categories = serverData.categories || categories;
         localStorage.setItem('task_manager_cache', JSON.stringify(tasks));
+        localStorage.setItem('task_manager_categories', JSON.stringify(categories));
+        updateCategoryUI();
         renderApp();
-      } catch (e) {
-        console.error(e);
+        if (selectedDateStr) renderDayDetailModalContent();
       }
     }
 
     async function completeTask(id) {
       tasks = tasks.filter(t => t.id !== id);
-      renderApp();
-      if (selectedDate) renderDayDetailModalContent();
-      try {
-        await fetchAPI('completeTask', { id });
-        await fetchFromServer();
-      } catch(e) {
-        alert('エラーが発生しました');
-        await fetchFromServer();
-      }
+      renderApp(); if (selectedDateStr) renderDayDetailModalContent();
+      await fetchAPI('completeTask', { id });
+      await loadAllData();
     }
 
     async function deleteTask(id) {
-      if(!confirm('本当に削除しますか？')) return;
+      if(!confirm('削除しますか？')) return;
       tasks = tasks.filter(t => t.id !== id);
-      renderApp();
-      if (selectedDate) renderDayDetailModalContent();
-      try {
-        await fetchAPI('deleteTask', { id });
-        await fetchFromServer();
-      } catch(e) {
-        alert('エラーが発生しました');
-        await fetchFromServer();
-      }
+      renderApp(); if (selectedDateStr) renderDayDetailModalContent();
+      await fetchAPI('deleteTask', { id });
+      await loadAllData();
     }
 
-    // --- ロジック ---
     function getTaskStatus(dueDate) {
       if (!dueDate) return 'nodate';
       const now = new Date();
       const taskDate = new Date(dueDate);
-      
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const tmrw = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
       const taskDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
-      
-      if (taskDate < now) return 'overdue'; 
+      if (taskDate < now) return 'overdue';
       if (taskDay.getTime() === today.getTime()) return 'today';
-      if (taskDay.getTime() === tmrw.getTime()) return 'tomorrow';
+      if (taskDay.getTime() === today.getTime() + 86400000) return 'tomorrow';
       return 'upcoming';
     }
 
-    // ビューの切り替え（リスト⇔カレンダー）
-    function setView(view) {
-      currentView = view;
+    function setView(view) { currentView = view; renderApp(); }
+
+    function renderApp() {
+      const isList = currentView === 'list';
+      document.getElementById('list-container').classList.toggle('hidden', !isList);
+      document.getElementById('calendar-container').classList.toggle('hidden', isList);
       const tabList = document.getElementById('tab-list');
       const tabCal = document.getElementById('tab-calendar');
-      const activeClass = "flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors bg-white shadow-sm text-dusty-blue-600";
-      const inactiveClass = "flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors text-gray-500 hover:text-gray-700";
-
-      if (view === 'list') {
-        tabList.className = activeClass;
-        tabCal.className = inactiveClass;
+      const active = "bg-white shadow-sm text-dusty-blue-600";
+      const inactive = "text-gray-500 hover:text-gray-700";
+      
+      if (isList) {
+        tabList.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${active}`;
+        tabCal.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${inactive}`;
+        renderTabs(); renderList();
       } else {
-        tabCal.className = activeClass;
-        tabList.className = inactiveClass;
-      }
-      renderApp();
-    }
-
-    // 画面全体の描画
-    function renderApp() {
-      if (currentView === 'list') {
-        document.getElementById('list-container').classList.remove('hidden');
-        document.getElementById('calendar-container').classList.add('hidden');
-        renderTabs();
-        renderList();
-      } else {
-        document.getElementById('list-container').classList.add('hidden');
-        document.getElementById('calendar-container').classList.remove('hidden');
+        tabCal.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${active}`;
+        tabList.className = `flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-colors ${inactive}`;
         renderCalendar();
       }
       lucide.createIcons();
     }
 
-    // ▼ リスト側の描画関数 ▼
     function renderTabs() {
       const container = document.getElementById('tabs-container');
-      const counts = { overdue: 0, today: 0, tomorrow: 0, upcoming: 0, nodate: 0, all: tasks.length };
-      tasks.forEach(t => {
-        const status = getTaskStatus(t.dueDate);
-        counts[status] = (counts[status] || 0) + 1;
-      });
-
+      const counts = { overdue: 0, today: 0, tomorrow: 0, upcoming: 0, nodate: 0, all: (tasks || []).length };
+      (tasks || []).forEach(t => { const s = getTaskStatus(t.dueDate); counts[s] = (counts[s] || 0) + 1; });
       const tabsData = [
         { id: 'today', label: '今日', count: counts.today },
         { id: 'tomorrow', label: '明日', count: counts.tomorrow },
@@ -360,263 +384,146 @@
         { id: 'nodate', label: '期日なし', count: counts.nodate },
         { id: 'all', label: 'すべて', count: counts.all },
       ];
-
-      if (counts.overdue > 0) {
-        tabsData.unshift({ id: 'overdue', label: '期限切れ', count: counts.overdue, isAlert: true });
-      }
-
-      let html = '';
-      tabsData.forEach(tab => {
+      if (counts.overdue > 0) tabsData.unshift({ id: 'overdue', label: '期限切れ', count: counts.overdue, isAlert: true });
+      container.innerHTML = tabsData.map(tab => {
         const isActive = currentFilter === tab.id;
-        const baseClass = "px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer";
-        
-        let activeClass, inactiveClass, badgeClass;
-        if (tab.isAlert) {
-          activeClass = "bg-red-500 text-white shadow-md";
-          inactiveClass = "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100";
-          badgeClass = isActive ? "bg-white text-red-600" : "bg-red-500 text-white";
-        } else {
-          activeClass = "bg-dusty-blue-600 text-white shadow-md";
-          inactiveClass = "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50";
-          badgeClass = isActive ? "bg-white text-dusty-blue-600" : "bg-gray-200 text-gray-600";
-        }
-
-        const badgeHtml = tab.count > 0 ? `<span class="px-1.5 py-0.5 rounded-full text-[10px] ${badgeClass}">${tab.count}</span>` : '';
-        html += `<button onclick="currentFilter='${tab.id}'; renderApp();" class="${baseClass} ${isActive ? activeClass : inactiveClass}">${tab.label} ${badgeHtml}</button>`;
-      });
-      container.innerHTML = html;
+        const color = tab.isAlert ? (isActive ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600 border-red-200') : (isActive ? 'bg-dusty-blue-600 text-white' : 'bg-white text-gray-600 border-gray-200');
+        return `<button onclick="currentFilter='${tab.id}'; renderApp();" class="px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap border flex items-center gap-1.5 transition-all ${color}">${tab.label} ${tab.count > 0 ? `<span class="px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-white text-current' : 'bg-gray-200'}">${tab.count}</span>` : ''}</button>`;
+      }).join('');
     }
 
     function renderList() {
       const container = document.getElementById('view-list');
-      let filteredTasks = tasks.filter(t => {
-        if (currentFilter === 'all') return true;
-        return getTaskStatus(t.dueDate) === currentFilter;
-      });
-
-      filteredTasks.sort((a, b) => {
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate) - new Date(b.dueDate);
-      });
-
-      if (filteredTasks.length === 0) {
-        container.innerHTML = `<div class="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100"><div class="text-gray-300 flex justify-center mb-3"><i data-lucide="inbox" class="w-10 h-10"></i></div><p class="text-gray-500 font-medium">タスクはありません</p></div>`;
+      let filtered = (tasks || []).filter(t => currentFilter === 'all' || getTaskStatus(t.dueDate) === currentFilter);
+      filtered.sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1);
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-400 font-medium">タスクがありません</div>`;
         return;
       }
-
-      let html = '';
-      filteredTasks.forEach(task => {
-        let dueDateHtml = '';
-        if (task.dueDate) {
-          const status = getTaskStatus(task.dueDate);
-          let colorClass = 'bg-green-50 text-green-700 border-green-200';
-          if (status === 'overdue') colorClass = 'bg-red-50 text-red-600 border-red-200 font-bold';
-          else if (status === 'today') colorClass = 'bg-orange-50 text-orange-600 border-orange-200 font-bold';
-          dueDateHtml = `<div class="text-[11px] px-2 py-0.5 rounded border flex items-center gap-1 shrink-0 ${colorClass}"><i data-lucide="calendar" class="w-3 h-3"></i>${formatDateTime(task.dueDate)}</div>`;
-        }
-
-        const catBadge = `<span class="text-[10px] px-2 py-0.5 border rounded-full bg-gray-50 text-gray-600 border-gray-200 shrink-0">${task.category || 'その他'}</span>`;
-        const repeatBadge = task.type !== 'specific' ? `<span class="text-[10px] px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full shrink-0"><i data-lucide="repeat" class="w-2.5 h-2.5 inline mr-0.5"></i>${getTypeLabel(task.type)}</span>` : '';
-
-        html += `
-          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-3 transition-all hover:border-dusty-blue-300 group">
-            <div class="pt-0.5">
-              <button onclick="completeTask(${task.id})" class="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-dusty-blue-500 hover:text-dusty-blue-500 transition-colors"><i data-lucide="check" class="w-3.5 h-3.5" stroke-width="3"></i></button>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between gap-2 mb-1">
-                <h3 class="font-bold text-gray-800 text-base leading-tight break-words">${escapeHTML(task.title)}</h3>
-                ${dueDateHtml}
-              </div>
-              <div class="flex flex-wrap items-center gap-1.5 mb-2">
-                ${catBadge}
-                ${getAutoCategoryLabel(task.title)}
-                ${repeatBadge}
-              </div>
-              ${renderMemoLink(task.memo)}
-            </div>
-            <div class="flex flex-col gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button onclick="openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-600 bg-gray-50 hover:bg-dusty-blue-50 rounded-lg"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-              <button onclick="deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </div>
-          </div>
-        `;
-      });
-      container.innerHTML = html;
+      container.innerHTML = filtered.map(task => createTaskCard(task)).join('');
+      lucide.createIcons();
     }
 
-    // ▼ カレンダー側の描画関数 ▼
-    function renderCalendar() {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      document.getElementById('calendar-title').textContent = `${year}年 ${month + 1}月`;
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const firstDayOfMonth = new Date(year, month, 1).getDay();
-      const todayString = getLocalIsoDateTime().slice(0, 10);
-
-      let gridHtml = '';
-      for (let i = 0; i < firstDayOfMonth; i++) gridHtml += `<div class="border-b border-r border-gray-100 bg-gray-50/50 min-h-[70px] sm:min-h-[90px]"></div>`;
-
-      for (let i = 1; i <= daysInMonth; i++) {
-        const d = new Date(year, month, i);
-        const dateString = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
-        const isToday = dateString === todayString;
-        
-        // 期日ありのものだけ抽出
-        const dateTasks = tasks.filter(t => t.dueDate && t.dueDate.startsWith(dateString));
-
-        let taskHtml = '';
-        dateTasks.forEach(task => {
-          taskHtml += `<div class="text-[9px] sm:text-[10px] truncate px-1 py-0.5 rounded bg-dusty-blue-100 text-dusty-blue-700 mb-0.5">${escapeHTML(task.title)}</div>`;
-        });
-
-        gridHtml += `
-          <div onclick="selectDate('${dateString}')" class="border-b border-r border-gray-100 p-1 relative group hover:bg-dusty-blue-50/50 cursor-pointer transition-colors overflow-hidden min-h-[70px] sm:min-h-[90px]">
-            <div class="flex justify-between items-start mb-1">
-              <span class="text-xs sm:text-sm font-medium w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-dusty-blue-500 text-white shadow-sm' : 'text-gray-700'}">${i}</span>
-            </div>
-            <div class="flex flex-col">${taskHtml}</div>
-          </div>
-        `;
+    function createTaskCard(task) {
+      let dueDateHtml = '';
+      if (task.dueDate) {
+        const s = getTaskStatus(task.dueDate);
+        const color = s === 'overdue' ? 'bg-red-50 text-red-600 border-red-100' : (s === 'today' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-700 border-green-100');
+        dueDateHtml = `<div class="text-[11px] px-2 py-0.5 rounded border font-bold ${color}">${formatDateTime(task.dueDate)}</div>`;
       }
-      document.getElementById('calendar-grid').innerHTML = gridHtml;
+      const cat = (categories || []).find(c => c.name === task.category) || { name: '未分類', color: '#999' };
+      return `
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-3 group">
+          <button onclick="completeTask(${task.id})" class="mt-1 w-6 h-6 shrink-0 rounded-full border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-dusty-blue-500 hover:text-dusty-blue-500 transition-colors"><i data-lucide="check" class="w-3.5 h-3.5" stroke-width="4"></i></button>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <h3 class="font-bold text-gray-800 break-words leading-tight">${escapeHTML(task.title)}</h3>
+              ${dueDateHtml}
+            </div>
+            <div class="flex items-center gap-1.5 mb-1">
+              <span class="text-[10px] px-2 py-0.5 border rounded-full font-medium" style="background-color: ${cat.color}20; border-color: ${cat.color}40; color: ${cat.color}">${task.category || '未分類'}</span>
+              ${task.type !== 'specific' ? `<span class="text-[10px] px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full font-bold">繰り返し</span>` : ''}
+            </div>
+            ${task.memo ? `<div class="text-xs text-gray-500 mt-1 p-2 bg-gray-50 rounded-lg">${escapeHTML(task.memo)}</div>` : ''}
+          </div>
+          <div class="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100">
+            <button onclick="openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+            <button onclick="deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>`;
     }
 
-    function prevMonth() { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1); renderApp(); }
-    function nextMonth() { currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1); renderApp(); }
+    function renderCalendar() {
+      const year = currentDate.getFullYear(), month = currentDate.getMonth();
+      document.getElementById('calendar-title').textContent = `${year}年 ${month + 1}月`;
+      const firstDay = new Date(year, month, 1).getDay();
+      const lastDate = new Date(year, month + 1, 0).getDate();
+      const todayStr = getLocalIsoDateTime().slice(0, 10);
+      let html = '';
+      for (let i = 0; i < firstDay; i++) html += `<div class="bg-gray-50/50 min-h-[90px] border-b border-r border-gray-100"></div>`;
+      for (let i = 1; i <= lastDate; i++) {
+        const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+        const dayTasks = (tasks || []).filter(t => t.dueDate && t.dueDate.startsWith(dStr));
+        const isToday = dStr === todayStr;
+        html += `
+          <div onclick="selectDate('${dStr}')" class="p-1 border-b border-r border-gray-100 min-h-[90px] hover:bg-dusty-blue-50 cursor-pointer transition-colors overflow-hidden">
+            <span class="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-dusty-blue-500 text-white' : 'text-gray-500'}">${i}</span>
+            <div class="mt-1 space-y-0.5">
+              ${dayTasks.slice(0, 3).map(t => {
+                const cat = (categories || []).find(c => c.name === t.category) || { color: '#999' };
+                return `<div class="text-[9px] truncate px-1 rounded font-bold" style="background-color: ${cat.color}20; color: ${cat.color}">${escapeHTML(t.title)}</div>`
+              }).join('')}
+              ${dayTasks.length > 3 ? '<div class="text-[8px] text-gray-400 text-center font-bold">...</div>' : ''}
+            </div>
+          </div>`;
+      }
+      document.getElementById('calendar-grid').innerHTML = html;
+    }
 
-    function selectDate(dateString) {
-      selectedDate = dateString;
-      renderDayDetailModalContent();
-      document.getElementById('day-detail-modal').classList.remove('hidden');
-      requestAnimationFrame(() => {
+    function selectDate(d) {
+      selectedDateStr = d; renderDayDetailModalContent();
+      const modal = document.getElementById('day-detail-modal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
         document.getElementById('day-detail-backdrop').classList.remove('opacity-0');
         document.getElementById('day-detail-sheet').classList.remove('translate-y-full');
-      });
+      }, 10);
     }
 
     function closeDayDetailModal() {
       document.getElementById('day-detail-backdrop').classList.add('opacity-0');
       document.getElementById('day-detail-sheet').classList.add('translate-y-full');
-      setTimeout(() => {
-        document.getElementById('day-detail-modal').classList.add('hidden');
-        selectedDate = null;
-      }, 300);
+      setTimeout(() => { document.getElementById('day-detail-modal').classList.add('hidden'); selectedDateStr = null; }, 300);
     }
 
     function renderDayDetailModalContent() {
-      if (!selectedDate) return;
-      const contentContainer = document.getElementById('day-detail-content');
-      document.getElementById('day-detail-title').innerHTML = `<i data-lucide="calendar" class="w-5 h-5 text-dusty-blue-500"></i> ${formatDateSimple(selectedDate)} のタスク`;
-      
-      const dateTasks = tasks.filter(t => t.dueDate && t.dueDate.startsWith(selectedDate)).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-      
-      let html = '';
-      if (dateTasks.length === 0) {
-        html = `<div class="text-center py-8 text-gray-500"><p>この日のタスクはありません。</p></div>`;
-      } else {
-        dateTasks.forEach(task => {
-          const timeString = task.dueDate.split('T')[1];
-          const catBadge = `<span class="text-[10px] px-2 py-0.5 border rounded-full bg-gray-100 text-gray-600 border-gray-200 shrink-0">${task.category || 'その他'}</span>`;
-          const repeatBadge = task.type !== 'specific' ? `<span class="text-[10px] px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full shrink-0"><i data-lucide="repeat" class="w-2.5 h-2.5 inline mr-0.5"></i>${getTypeLabel(task.type)}</span>` : '';
-
-          html += `
-            <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-100 flex gap-3 transition-all hover:border-dusty-blue-300 group mb-3">
-              <div class="pt-0.5">
-                <button onclick="event.stopPropagation(); completeTask(${task.id})" class="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-dusty-blue-500 hover:text-dusty-blue-500 transition-colors"><i data-lucide="check" class="w-3.5 h-3.5" stroke-width="3"></i></button>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2 mb-1">
-                  <h4 class="font-bold text-gray-800 text-[15px] leading-tight break-words">${escapeHTML(task.title)}</h4>
-                  ${timeString ? `<span class="text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded shrink-0 border border-gray-200">${timeString}</span>` : ''}
-                </div>
-                <div class="flex flex-wrap items-center gap-1.5 mb-2">
-                  ${catBadge}
-                  ${getAutoCategoryLabel(task.title)}
-                  ${repeatBadge}
-                </div>
-                ${renderMemoLink(task.memo)}
-              </div>
-              <div class="flex flex-col gap-1.5 shrink-0">
-                <button onclick="event.stopPropagation(); openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-600 bg-gray-50 hover:bg-dusty-blue-50 rounded-lg"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                <button onclick="event.stopPropagation(); deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
-            </div>
-          `;
-        });
-      }
-      contentContainer.innerHTML = html;
+      if (!selectedDateStr) return;
+      const filtered = (tasks || []).filter(t => t.dueDate && t.dueDate.startsWith(selectedDateStr));
+      const dateObj = new Date(selectedDateStr);
+      const days = ['日','月','火','水','木','金','土'];
+      document.getElementById('day-detail-title').textContent = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日(${days[dateObj.getDay()]})`;
+      document.getElementById('day-detail-content').innerHTML = filtered.length ? filtered.map(t => createTaskCard(t)).join('') : '<div class="text-center py-12 text-gray-400 font-medium">予定はありません</div>';
       lucide.createIcons();
     }
 
-    // --- UI/UX Helpers ---
+    function openModalFromCalendar() {
+      if (!selectedDateStr) return;
+      openModal();
+      document.getElementById('task-dueDate').value = `${selectedDateStr}T23:59`;
+    }
+
     function openModal() {
       editingTaskId = null;
       document.getElementById('add-task-form').reset();
-      document.getElementById('modal-title').textContent = '新規タスクの追加';
-      
-      const now = new Date();
-      now.setHours(23, 59, 0, 0); 
-      document.getElementById('task-dueDate').value = getLocalIsoDateTime(now);
-      
+      document.getElementById('modal-title').textContent = '新規タスク';
+      const defaultDate = new Date(); defaultDate.setHours(23, 59, 0, 0);
+      document.getElementById('task-dueDate').value = getLocalIsoDateTime(defaultDate);
       document.getElementById('add-modal').classList.remove('hidden');
     }
 
     function openEditModal(id) {
-      const task = tasks.find(t => t.id === id);
-      if (!task) return;
+      const task = tasks.find(t => t.id === id); if (!task) return;
       editingTaskId = id;
       document.getElementById('modal-title').textContent = 'タスクの編集';
       document.getElementById('task-title').value = task.title || '';
-      document.getElementById('task-category').value = task.category || 'その他';
+      document.getElementById('task-category').value = task.category || (categories[0] ? categories[0].name : '');
       document.getElementById('task-type').value = task.type || 'specific';
-      document.getElementById('task-dueDate').value = task.dueDate || '';
+      const dInput = document.getElementById('task-dueDate');
+      if (task.dueDate) dInput.value = task.dueDate.slice(0, 16);
       document.getElementById('task-memo').value = task.memo || '';
-      
       document.getElementById('add-modal').classList.remove('hidden');
     }
 
     function closeModal() { document.getElementById('add-modal').classList.add('hidden'); }
-
-    function getLocalIsoDateTime(d = new Date()) {
-      return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-    }
-    function formatDateTime(str) {
-      if (!str) return '';
-      const d = new Date(str);
+    function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderApp(); }
+    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderApp(); }
+    function getLocalIsoDateTime(d = new Date()) { return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); }
+    function formatDateTime(s) {
+      const d = new Date(s);
       const days = ['日','月','火','水','木','金','土'];
       return `${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     }
-    function getTypeLabel(t) {
-      const m = {'daily':'毎日', 'weekly':'毎週', 'biweekly':'2週毎', 'triweekly':'3週毎', 'monthly':'毎月'};
-      return m[t] || '';
-    }
-    function getAutoCategoryLabel(title) {
-      const rules = [
-        { k: ['会議','mtg','打合'], c: 'bg-red-100 text-red-700 border-red-200' },
-        { k: ['開発','実装','コード','バグ'], c: 'bg-blue-100 text-blue-700 border-blue-200' },
-        { k: ['資料','提案書','作成'], c: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-        { k: ['連絡','メール','電話','確認'], c: 'bg-amber-100 text-amber-700 border-amber-200' },
-        { k: ['重要','至急'], c: 'bg-purple-100 text-purple-700 border-purple-200 font-bold' }
-      ];
-      for (let r of rules) {
-        if (r.k.some(kw => title.toLowerCase().includes(kw))) 
-          return `<span class="text-[10px] px-2 py-0.5 border rounded-full shrink-0 ${r.c}">${r.k[0]}</span>`;
-      }
-      return '';
-    }
-    function escapeHTML(s) {
-      return s ? s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t)) : '';
-    }
-    function renderMemoLink(m) {
-      if (!m) return '';
-      const esc = escapeHTML(m);
-      const text = esc.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-dusty-blue-500 hover:underline break-all" onclick="event.stopPropagation()">$1</a>');
-      return `<div class="text-[13px] text-gray-600 mt-2 bg-gray-50 p-2.5 rounded border border-gray-100 whitespace-pre-wrap">${text}</div>`;
-    }
+    function escapeHTML(s) { return s ? s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t)) : ''; }
   </script>
 </body>
 </html>
