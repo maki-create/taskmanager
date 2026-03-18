@@ -3,571 +3,581 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Task Manager</title>
-   <!-- PWA化のための設定 -->
+  <title>Household Budget App</title>
+  
+  <!-- PWA化のための設定 -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f766e">
-  <link rel="apple-touch-icon" href="アイコン.png">
+  <link rel="apple-touch-icon" href="26163.png">
+  
+  <!-- CSS Framework: Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: { colors: { 'dusty-blue': { 50: '#f2f6f8', 100: '#dfe8ed', 200: '#c2d5e0', 300: '#99bcce', 400: '#6a9db6', 500: '#52839d', 600: '#466a81', 700: '#3a566a', 800: '#334858', 900: '#2e3e4b', } } } }
-    }
-  </script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js for Donut Chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
+    body {
+      background-color: #f5f5f4; /* stone-100 */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #44403c; /* stone-700 */
+    }
+    
+    /* Navigation Active State */
+    .nav-item.active {
+      color: #0f766e; /* teal-700 */
+    }
+    .nav-item.active svg {
+      stroke-width: 2.5px;
+    }
+
+    /* Subtab Active State */
+    .subtab.active {
+      background-color: #ffffff;
+      color: #1c1917; /* stone-900 */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-weight: 700;
+    }
+    .subtab {
+      color: #78716c; /* stone-500 */
+      font-weight: 500;
+    }
+
+    /* Chart Container */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 240px;
+      margin: 0 auto;
+    }
+
+    /* Hide scrollbar */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* View transitions */
+    .view {
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+    .view.active { display: block; }
+    
+    .panel {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Bottom Nav Padding */
+    .nav-bar {
+      padding-top: 10px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    /* Loading Spinner */
     .spinner {
-      border: 2px solid #dfe8ed;
-      border-top: 2px solid #52839d;
+      border: 2px solid #e7e5e4;
+      border-top: 2px solid #0f766e;
       border-radius: 50%;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    
-    .calendar-cell { min-height: 100px; }
-    @media (max-width: 640px) {
-      .calendar-cell { min-height: 80px; }
-    }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans pb-24 min-h-screen">
+<body class="antialiased selection:bg-teal-100">
 
-  <header class="bg-white shadow-sm sticky top-0 z-10 px-4 py-2">
-    <div class="max-w-4xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-2">
-        <div id="header-date" class="text-base sm:text-lg font-bold text-dusty-blue-800 tracking-tight"></div>
-        <div id="sync-indicator" class="spinner hidden"></div>
-      </div>
-      
-      <div class="flex items-center gap-2">
-        <button onclick="openCategoryModal()" class="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-          <i data-lucide="tag" class="w-5 h-5"></i>
-        </button>
-
-        <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-          <button id="tab-calendar" onclick="setView('calendar')" class="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-colors">
-            <i data-lucide="calendar" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">カレンダー</span>
-          </button>
-          <button id="tab-list" onclick="setView('list')" class="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-bold transition-colors">
-            <i data-lucide="list" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">リスト</span>
-          </button>
-        </div>
-      </div>
+  <!-- Header -->
+  <header class="bg-white/90 backdrop-blur-md shadow-sm border-b border-stone-200 p-4 fixed top-0 w-full z-20 flex justify-between items-center h-14">
+    <div class="w-8"></div><!-- spacer -->
+    <h1 class="text-lg font-bold text-stone-800 tracking-tight" id="header-title">ホーム</h1>
+    <div class="w-8 flex justify-end">
+      <!-- 同期中を示すスピナー（初期状態は隠す） -->
+      <div id="sync-indicator" class="spinner hidden" title="データ同期中..."></div>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto px-2 sm:px-4 mt-4">
-    <div id="calendar-container">
-      <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-        <div class="p-2 flex justify-between items-center bg-gray-50 border-b border-gray-100">
-          <button onclick="prevMonth()" class="p-2 hover:bg-gray-200 rounded-full text-gray-600 transition-colors">
-            <i data-lucide="chevron-left" class="w-5 h-5"></i>
-          </button>
-          <button onclick="currentDate = new Date(); renderApp();" class="text-xs px-3 py-1 bg-white border border-gray-200 rounded-md shadow-sm font-bold text-gray-600 active:scale-95 transition-transform">今日</button>
-          <button onclick="nextMonth()" class="p-2 hover:bg-gray-200 rounded-full text-gray-600 transition-colors">
-            <i data-lucide="chevron-right" class="w-5 h-5"></i>
-          </button>
-        </div>
+  <main class="mt-14 container mx-auto max-w-md relative">
+
+    <!-- ==============================
+         VIEW 1: HOME (DASHBOARD)
+         ============================== -->
+    <div id="view-home" class="view active px-4 pt-4 pb-40 space-y-5">
+      
+      <!-- Subtabs for Home -->
+      <div class="bg-stone-200/80 p-1 rounded-xl flex gap-1 shadow-inner">
+        <button id="subtab-spend" class="subtab active flex-1 py-2 text-sm rounded-lg transition-all" onclick="switchHomePanel('spend')">
+          支出状況
+        </button>
+        <button id="subtab-asset" class="subtab flex-1 py-2 text-sm rounded-lg transition-all" onclick="switchHomePanel('asset')">
+          資産状況
+        </button>
+      </div>
+
+      <!-- PANEL A: SPEND (支出状況) -->
+      <div id="panel-spend" class="panel active space-y-6">
         
-        <div class="grid grid-cols-7 bg-white border-b border-gray-100">
-          <div class="py-2 text-center text-[10px] font-bold text-red-500">日</div>
-          <div class="py-2 text-center text-[10px] font-bold text-gray-400">月</div>
-          <div class="py-2 text-center text-[10px] font-bold text-gray-400">火</div>
-          <div class="py-2 text-center text-[10px] font-bold text-gray-400">水</div>
-          <div class="py-2 text-center text-[10px] font-bold text-gray-400">木</div>
-          <div class="py-2 text-center text-[10px] font-bold text-gray-400">金</div>
-          <div class="py-2 text-center text-[10px] font-bold text-blue-500">土</div>
-        </div>
-        <div id="calendar-grid" class="grid grid-cols-7"></div>
+        <section class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+          <div class="flex justify-between items-end mb-3">
+            <h2 class="text-stone-800 font-bold">支出の内訳と貯蓄</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="spendChart"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+              <span class="text-xs font-bold text-stone-400 mb-0.5">現在の総支出</span>
+              <span class="text-3xl font-bold text-stone-800 tracking-tight" id="chart-total-spend">¥---</span>
+              <span class="text-xs font-bold text-blue-600 mt-1 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100" id="chart-savings-text">貯蓄: ¥---</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Category Budgets Section -->
+        <section>
+          <div class="flex justify-between items-end mb-3 px-1">
+            <h2 class="text-stone-800 font-bold">項目別 予算消化</h2>
+          </div>
+          <div id="budget-list">
+            <p class="text-center text-stone-400 text-sm py-4">データを読み込んでいます...</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- PANEL B: ASSET (資産状況) -->
+      <div id="panel-asset" class="panel space-y-5">
+        
+        <section class="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+          <div class="flex justify-between items-end mb-4">
+            <h2 class="text-stone-800 font-bold">総資産の内訳</h2>
+          </div>
+          <div class="chart-container mb-2">
+            <canvas id="assetChart"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+              <span class="text-xs font-bold text-stone-400 mb-0.5">現在の総資産</span>
+              <span class="text-3xl font-bold text-stone-800 tracking-tight" id="chart-total-asset">¥---</span>
+            </div>
+          </div>
+          
+          <div id="asset-list" class="space-y-3 mt-6 border-t border-stone-100 pt-5 px-1">
+            <p class="text-center text-stone-400 text-sm py-4">データを読み込んでいます...</p>
+          </div>
+        </section>
+        
       </div>
     </div>
 
-    <div id="list-container" class="hidden">
-      <div id="tabs-container" class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4"></div>
-      <div id="view-list" class="space-y-3"></div>
+    <!-- ==============================
+         VIEW 2: INPUT (ADD)
+         ============================== -->
+    <div id="view-add" class="view px-4 pt-4 pb-40 space-y-5">
+      
+      <div class="bg-stone-200/80 p-1 rounded-xl flex gap-1 shadow-inner">
+        <button id="subtab-auto" class="subtab active flex-1 py-2 text-sm rounded-lg transition-all" onclick="switchAddPanel('auto')">
+          カードの確認
+        </button>
+        <button id="subtab-manual" class="subtab flex-1 py-2 text-sm rounded-lg transition-all" onclick="switchAddPanel('manual')">
+          新規手入力
+        </button>
+      </div>
+
+      <!-- PANEL C: AUTO INPUT (カードの補完) -->
+      <div id="panel-auto" class="panel active space-y-6">
+        <section class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+          <div class="bg-red-50 p-4 border-b border-red-100 flex justify-between items-center">
+            <h2 class="text-red-800 font-bold flex items-center gap-2">
+              <span class="text-lg">💳</span> 自動記録の確認
+            </h2>
+            <span class="text-xs bg-white text-red-500 px-2 py-1 rounded-full font-bold shadow-sm border border-red-200" id="badge-incomplete">0</span>
+          </div>
+          <div id="incomplete-container" class="p-4 space-y-4 bg-stone-50/50">
+            <p class="text-stone-400 text-sm text-center py-2">未確認のデータはありません</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- PANEL D: MANUAL INPUT (完全手入力) -->
+      <div id="panel-manual" class="panel space-y-6">
+        <section class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+          <div class="bg-teal-50 p-4 border-b border-teal-100">
+            <h2 class="text-teal-800 font-bold flex items-center gap-2">
+              <span class="text-lg">✏️</span> 手入力
+            </h2>
+          </div>
+          <div class="p-5">
+            <form onsubmit="submitManual(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-stone-500 mb-1">日付</label>
+                <input type="date" id="input-date" required class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-stone-500 mb-1">金額</label>
+                <input type="number" id="input-amount" placeholder="¥" required class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm font-mono focus:ring-2 focus:ring-teal-500 outline-none">
+              </div>
+              
+              <div>
+                <label class="block text-xs font-bold text-stone-500 mb-1">支払方法 (自動でカテゴリが変わります)</label>
+                <select id="input-app" onchange="updateItemOptions()" required class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="">読込中...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-stone-500 mb-1">項目</label>
+                <select id="input-item" required class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                  <option value="">支払方法を選択してください</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-stone-500 mb-1">メモ (任意)</label>
+                <input type="text" id="input-memo" placeholder="詳細を入力..." class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+              </div>
+              <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl shadow-md transition-all active:scale-95 mt-2">
+                追加する
+              </button>
+            </form>
+          </div>
+        </section>
+      </div>
+
     </div>
+
   </main>
 
-  <div id="day-detail-modal" class="hidden fixed inset-0 z-30 flex flex-col justify-end">
-    <div id="day-detail-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0" onclick="closeDayDetailModal()"></div>
-    <div id="day-detail-sheet" class="relative bg-white rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden flex flex-col max-h-[85vh] transform translate-y-full transition-transform duration-300 ease-out">
-      <div class="w-full flex justify-center pt-3 pb-2 bg-white cursor-pointer" onclick="closeDayDetailModal()">
-        <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
-      </div>
-      <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 bg-white">
-        <h3 id="day-detail-title" class="font-bold text-gray-800 text-lg"></h3>
-        <button onclick="openModalFromCalendar()" class="p-1.5 text-dusty-blue-600 hover:bg-dusty-blue-50 rounded-full">
-          <i data-lucide="plus" class="w-6 h-6"></i>
-        </button>
-      </div>
-      <div id="day-detail-content" class="p-4 overflow-y-auto bg-gray-50 flex-1 no-scrollbar pb-10"></div>
-    </div>
-  </div>
+  <!-- Bottom Navigation -->
+  <nav class="bg-white/95 backdrop-blur border-t border-stone-200 fixed bottom-0 w-full flex justify-around items-center z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.03)] nav-bar">
+    <button onclick="switchTab('home')" id="tab-home" class="nav-item tab-active flex flex-col items-center justify-center w-1/2 py-1 gap-1 text-teal-700 transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+      <span class="text-[10px] font-medium">ホーム</span>
+    </button>
+    <button onclick="switchTab('add')" id="tab-add" class="nav-item flex flex-col items-center justify-center w-1/2 py-1 gap-1 text-stone-400 transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+      <span class="text-[10px] font-medium">入力</span>
+    </button>
+  </nav>
 
-  <div id="add-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-end sm:items-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-      <div class="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
-        <h2 id="modal-title" class="text-lg font-bold text-gray-800">タスク</h2>
-        <button onclick="closeModal()" class="p-1.5 text-gray-400 hover:bg-gray-200 rounded-full">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div class="p-5 overflow-y-auto no-scrollbar bg-white">
-        <form id="add-task-form" class="space-y-5">
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-1">内容 <span class="text-red-500">*</span></label>
-            <input type="text" id="task-title" required placeholder="何をする？" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-dusty-blue-400 outline-none">
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-1">カテゴリ</label>
-              <select id="task-category" class="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-gray-700"></select>
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-1">繰り返し</label>
-              <select id="task-type" onchange="handleTaskTypeChange()" class="w-full p-2.5 border border-gray-300 rounded-lg bg-white text-gray-700">
-                <option value="specific">1回のみ</option>
-                <option value="daily">毎日</option>
-                <option value="weekly">毎週</option>
-                <option value="monthly">毎月</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-1">期日 <span id="due-date-required-mark" class="text-red-500">*</span></label>
-            <input type="datetime-local" id="task-dueDate" class="w-full p-2.5 border border-gray-300 rounded-lg">
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-1">メモ</label>
-            <textarea id="task-memo" rows="2" class="w-full p-2.5 border border-gray-300 rounded-lg resize-none"></textarea>
-          </div>
-        </form>
-      </div>
-      <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-        <button type="submit" form="add-task-form" class="px-5 py-2.5 text-sm font-medium text-white bg-dusty-blue-500 rounded-lg">保存</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="category-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
-      <div class="flex justify-between items-center p-4 border-b border-gray-100">
-        <h2 class="text-lg font-bold text-gray-800">カテゴリ管理</h2>
-        <button onclick="closeCategoryModal()" class="p-1.5 text-gray-400 hover:bg-gray-100 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="p-4 space-y-4">
-        <div class="flex gap-2">
-          <input type="text" id="new-cat-name" placeholder="名" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
-          <input type="color" id="new-cat-color" value="#6a9db6" class="w-10 h-10 p-0.5 border border-gray-300 rounded-lg bg-white">
-          <button onclick="addCategory()" class="px-3 bg-dusty-blue-500 text-white rounded-lg text-sm font-bold">追加</button>
-        </div>
-        <div id="category-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
-      </div>
-      <div class="p-4 bg-gray-50 text-right">
-        <button onclick="closeCategoryModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold">閉じる</button>
-      </div>
-    </div>
-  </div>
-
-  <button onclick="openModal()" class="fixed bottom-8 right-8 w-14 h-14 bg-dusty-blue-500 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95 z-20">
-    <i data-lucide="plus" class="w-7 h-7"></i>
-  </button>
-
+  <!-- Application Logic -->
   <script>
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyIKtv1UervjNT3x6-_lXXuDHyE7tXerPpsOzB0eXP1GiFThVjN4fx6AnijpqkvdsZ1Sw/exec';
-    
-    let tasks = [];
-    let categories = [
-      { name: '仕事', color: '#3b82f6' },
-      { name: '日常', color: '#10b981' },
-      { name: 'その他', color: '#6b7280' }
-    ];
-    let isSyncing = false;
-    let editingTaskId = null;
-    let currentFilter = 'today';
-    let currentView = 'calendar';
-    let currentDate = new Date();
-    let selectedDateStr = null;
+    let globalItems = {}; 
+    let globalTimeline = []; 
+    let spendChartInstance = null;
+    let assetChartInstance = null;
 
-    async function fetchAPI(action, payload = {}) {
-      setSyncing(true);
+    const SPEND_COLORS = ['#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf', '#22d3ee', '#94a3b8'];
+    const SAVINGS_COLOR = '#3b82f6';
+    const ASSET_COLORS = ['#0f766e', '#059669', '#2563eb', '#7c3aed'];
+
+    // --- MOCK DATA FOR PREVIEW ---
+    const MOCK_DATA = {
+      spendBreakdown: { totalSpend: 135000, savings: 65000, items: [ { name: "食費", amount: 12000 }, { name: "外食費", amount: 18000 } ] },
+      assets: { totalAsset: 3800000, items: [ { name: "三井住友銀行", amount: 1500000 }, { name: "積立ＮＩＳＡ", amount: 1200000 } ] },
+      budgets: [ { name: "食費", budget: 40000, current: 30000 } ],
+      timeline: [ { date: "2/23", category: "支出・Paypay", item: "食費", amount: 3450, app: "Paypay", memo: "スーパー" } ],
+      incomplete: [ { rowNum: 20, date: "2/23", amount: 1200, app: "支出・Paypay" } ],
+      items: {
+        "支出・現金": ["昼食", "外食費", "娯楽", "医療費", "交通費", "日用品費"],
+        "支出・Paypay": ["昼食", "外食費", "娯楽", "医療費", "交通費", "日用品費"],
+        "支出・口座引落": ["三井住友カ", "PayPayカー", "振込", "その他"],
+        "支出・カード": ["三井住友カ", "その他"] // テスト用
+      }
+    };
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.classList.remove('active', 'tab-active', 'text-teal-700');
+        btn.classList.add('text-stone-400');
+      });
+      document.getElementById('view-' + tabName).classList.add('active');
+      const activeBtn = document.getElementById('tab-' + tabName);
+      activeBtn.classList.remove('text-stone-400');
+      activeBtn.classList.add('active', 'text-teal-700');
+      const titles = { 'home': 'ホーム', 'add': '支出の入力' };
+      document.getElementById('header-title').innerText = titles[tabName];
+    }
+
+    function switchHomePanel(panelName) {
+      document.querySelectorAll('#view-home .panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#view-home .subtab').forEach(t => t.classList.remove('active'));
+      document.getElementById('panel-' + panelName).classList.add('active');
+      document.getElementById('subtab-' + panelName).classList.add('active');
+    }
+
+    function switchAddPanel(panelName) {
+      document.querySelectorAll('#view-add .panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#view-add .subtab').forEach(t => t.classList.remove('active'));
+      document.getElementById('panel-' + panelName).classList.add('active');
+      document.getElementById('subtab-' + panelName).classList.add('active');
+    }
+
+    // ==========================================
+    // API通信用設定
+    // ==========================================
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxkgFt_Raqgj65w8L9teUh3NBs-DxzTEsK5xf4qLcVVPFzxG9oNnUyh8cjiBPDviSK2aQ/exec';
+
+    async function fetchAPI(action, data = {}) {
+      const payload = { action: action, ...data };
       try {
-        const res = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ action: action, ...payload })
+        const response = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          redirect: 'follow',
+          body: JSON.stringify(payload)
         });
-        const json = await res.json();
-        if (json.status === 'error') throw new Error(json.message);
-        return json.data;
-      } catch (err) {
-        console.error("API Error:", err);
-        return null;
-      } finally { setSyncing(false); }
+        const result = await response.json();
+        if (result.status === "error") throw new Error(result.message);
+        return result.data; 
+      } catch (error) {
+        console.error("通信エラー:", error);
+        throw new Error("通信に失敗しました。ネットワークを確認してください。");
+      }
     }
 
-    function setSyncing(status) {
-      isSyncing = status;
-      const el = document.getElementById('sync-indicator');
-      if (el) el.classList.toggle('hidden', !status);
-    }
-
-    function updateCategoryUI() {
-      const select = document.getElementById('task-category');
-      if (!select) return;
-      select.innerHTML = (categories || []).map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    window.onload = function() {
+      // ★追加：データ構造が変わったため、ブラウザに残っている古いキャッシュを一度削除してリセットします
+      localStorage.removeItem('kakeibo_data_cache');
       
-      const list = document.getElementById('category-list');
-      if (!list) return;
-      list.innerHTML = (categories || []).map((c, i) => `
-        <div class="flex items-center justify-between p-2 bg-white border border-gray-100 rounded-lg shadow-sm">
-          <div class="flex items-center gap-2">
-            <div class="w-4 h-4 rounded-full" style="background-color: ${c.color}"></div>
-            <span class="text-sm font-medium">${escapeHTML(c.name)}</span>
-          </div>
-          ${categories.length > 1 ? `<button onclick="removeCategory(${i})" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
-        </div>
-      `).join('');
-      lucide.createIcons();
-    }
-
-    async function addCategory() {
-      const name = document.getElementById('new-cat-name').value.trim();
-      const color = document.getElementById('new-cat-color').value;
-      if (!name) return;
-      if (categories.some(c => c.name === name)) { alert('既に存在します'); return; }
-      categories.push({ name, color });
-      updateCategoryUI();
-      document.getElementById('new-cat-name').value = '';
-      renderApp();
-      await fetchAPI('updateCategories', { categories });
-    }
-
-    async function removeCategory(index) {
-      if (!confirm('カテゴリを削除しますか？')) return;
-      categories.splice(index, 1);
-      updateCategoryUI();
-      renderApp();
-      await fetchAPI('updateCategories', { categories });
-    }
-
-    function openCategoryModal() { document.getElementById('category-modal').classList.remove('hidden'); }
-    function closeCategoryModal() { document.getElementById('category-modal').classList.add('hidden'); }
-
-    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('input-date').valueAsDate = new Date();
       loadAllData();
-      document.getElementById('add-task-form').addEventListener('submit', handleTaskSubmit);
-    });
-
-    function handleTaskTypeChange() {
-      const type = document.getElementById('task-type').value;
-      const dueDateInput = document.getElementById('task-dueDate');
-      const requiredMark = document.getElementById('due-date-required-mark');
-      if (type === 'specific') {
-        dueDateInput.required = true; requiredMark.classList.remove('hidden');
-      } else {
-        dueDateInput.required = false; requiredMark.classList.add('hidden');
-        let targetDate = new Date();
-        if (type === 'weekly') targetDate.setDate(targetDate.getDate() + 7);
-        else if (type === 'monthly') targetDate.setMonth(targetDate.getMonth() + 1);
-        targetDate.setHours(23, 59, 0, 0);
-        dueDateInput.value = getLocalIsoDateTime(targetDate);
-      }
-    }
-
-    async function handleTaskSubmit(e) {
-      e.preventDefault();
-      const title = document.getElementById('task-title').value.trim();
-      if (!title) return;
-      const newTaskData = {
-        title: title,
-        category: document.getElementById('task-category').value,
-        type: document.getElementById('task-type').value,
-        dueDate: document.getElementById('task-dueDate').value,
-        memo: document.getElementById('task-memo').value,
-      };
-      if (editingTaskId) {
-        const idx = tasks.findIndex(t => t.id === editingTaskId);
-        if (idx !== -1) {
-          tasks[idx] = { ...tasks[idx], ...newTaskData };
-          closeModal(); renderApp();
-          if (selectedDateStr) renderDayDetailModalContent();
-          await fetchAPI('editTask', { task: tasks[idx] });
-          await loadAllData();
-        }
-      } else {
-        const newTask = { id: Date.now(), registerDate: new Date().toISOString().slice(0, 10), completed: false, ...newTaskData };
-        tasks.push(newTask);
-        closeModal(); renderApp();
-        await fetchAPI('addTask', { task: newTask });
-        await loadAllData();
-      }
-    }
+    };
 
     async function loadAllData() {
-      const cachedTasks = localStorage.getItem('task_manager_cache');
-      const cachedCats = localStorage.getItem('task_manager_categories');
-      if (cachedTasks) tasks = JSON.parse(cachedTasks);
-      if (cachedCats) categories = JSON.parse(cachedCats);
-      
-      updateCategoryUI();
-      renderApp();
-      
-      const serverData = await fetchAPI('getTasks');
-      if (serverData) {
-        tasks = serverData.tasks || [];
-        categories = serverData.categories || categories;
-        localStorage.setItem('task_manager_cache', JSON.stringify(tasks));
-        localStorage.setItem('task_manager_categories', JSON.stringify(categories));
-        updateCategoryUI();
-        renderApp();
+      const cachedData = localStorage.getItem('kakeibo_data_cache');
+      if (cachedData) {
+        try { renderData(JSON.parse(cachedData)); } catch (e) { console.error('Cache error', e); }
+      }
+      const syncIndicator = document.getElementById('sync-indicator');
+      syncIndicator.classList.remove('hidden');
+
+      try {
+        const data = await fetchAPI('getAllData');
+        renderData(data); 
+        localStorage.setItem('kakeibo_data_cache', JSON.stringify(data));
+      } catch (error) {
+        if (!cachedData) showError(error);
+      } finally {
+        syncIndicator.classList.add('hidden');
       }
     }
 
-    async function completeTask(id) {
-      tasks = tasks.filter(t => t.id !== id);
-      renderApp(); if (selectedDateStr) renderDayDetailModalContent();
-      await fetchAPI('completeTask', { id });
-      await loadAllData();
-    }
-
-    async function deleteTask(id) {
-      if(!confirm('削除しますか？')) return;
-      tasks = tasks.filter(t => t.id !== id);
-      renderApp(); if (selectedDateStr) renderDayDetailModalContent();
-      await fetchAPI('deleteTask', { id });
-      await loadAllData();
-    }
-
-    function getTaskStatus(dueDate) {
-      if (!dueDate) return 'nodate';
-      const now = new Date();
-      const taskDate = new Date(dueDate);
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const taskDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate());
-      if (taskDate < now) return 'overdue';
-      if (taskDay.getTime() === today.getTime()) return 'today';
-      if (taskDay.getTime() === today.getTime() + 86400000) return 'tomorrow';
-      return 'upcoming';
-    }
-
-    function setView(view) { currentView = view; renderApp(); }
-
-    function renderApp() {
-      const isList = currentView === 'list';
-      document.getElementById('list-container').classList.toggle('hidden', !isList);
-      document.getElementById('calendar-container').classList.toggle('hidden', isList);
+    function renderData(data) {
+      if(!data) return;
+      updateSpendChartUI(data.spend);
+      updateAssetChartUI(data.asset);
+      storeTimelineData(data.timeline);
+      updateBudgets(data.budgets);
       
-      const tabList = document.getElementById('tab-list');
-      const tabCal = document.getElementById('tab-calendar');
-      const active = "bg-white shadow-sm text-dusty-blue-600";
-      const inactive = "text-gray-500 hover:text-gray-700";
-
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
-      document.getElementById('header-date').textContent = `${year}年 ${month}月`;
-      
-      if (isList) {
-        tabList.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${active}`;
-        tabCal.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${inactive}`;
-        renderTabs(); renderList();
-      } else {
-        tabCal.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${active}`;
-        tabList.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${inactive}`;
-        renderCalendar();
-      }
-      lucide.createIcons();
+      globalItems = data.items;
+      initAppSelect(globalItems); 
+      updateIncompleteForms(data.incomplete);
     }
 
-    function renderTabs() {
-      const container = document.getElementById('tabs-container');
-      const counts = { overdue: 0, today: 0, tomorrow: 0, upcoming: 0, nodate: 0, all: (tasks || []).length };
-      (tasks || []).forEach(t => { const s = getTaskStatus(t.dueDate); counts[s] = (counts[s] || 0) + 1; });
-      const tabsData = [
-        { id: 'today', label: '今日', count: counts.today },
-        { id: 'tomorrow', label: '明日', count: counts.tomorrow },
-        { id: 'upcoming', label: '以降', count: counts.upcoming },
-        { id: 'nodate', label: '期日なし', count: counts.nodate },
-        { id: 'all', label: 'すべて', count: counts.all },
-      ];
-      if (counts.overdue > 0) tabsData.unshift({ id: 'overdue', label: '期限切れ', count: counts.overdue, isAlert: true });
-      container.innerHTML = tabsData.map(tab => {
-        const isActive = currentFilter === tab.id;
-        const color = tab.isAlert ? (isActive ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600 border-red-200') : (isActive ? 'bg-dusty-blue-600 text-white' : 'bg-white text-gray-600 border-gray-200');
-        return `<button onclick="currentFilter='${tab.id}'; renderApp();" class="px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border flex items-center gap-1 transition-all ${color}">${tab.label} ${tab.count > 0 ? `<span class="px-1.5 py-0.5 rounded-full text-[9px] ${isActive ? 'bg-white text-current' : 'bg-gray-200'}">${tab.count}</span>` : ''}</button>`;
-      }).join('');
+    function updateSpendChartUI(data) { 
+      if(!data) return;
+      document.getElementById('chart-total-spend').innerText = '¥ ' + data.totalSpend.toLocaleString();
+      document.getElementById('chart-savings-text').innerText = '貯蓄: ¥ ' + data.savings.toLocaleString();
+      const labels = data.items.map(i => i.name).concat(['貯蓄']);
+      const amounts = data.items.map(i => i.amount).concat([data.savings]);
+      const colors = SPEND_COLORS.slice(0, data.items.length).concat([SAVINGS_COLOR]);
+      if (spendChartInstance) spendChartInstance.destroy();
+      const ctx = document.getElementById('spendChart').getContext('2d');
+      spendChartInstance = new Chart(ctx, {
+        type: 'doughnut', data: { labels: labels, datasets: [{ data: amounts, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4 }] },
+        options: { cutout: '72%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' ' + context.label + ': ¥' + context.raw.toLocaleString(); } } } } }
+      });
     }
 
-    function renderList() {
-      const container = document.getElementById('view-list');
-      let filtered = (tasks || []).filter(t => currentFilter === 'all' || getTaskStatus(t.dueDate) === currentFilter);
-      filtered.sort((a, b) => (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : -1);
-      if (filtered.length === 0) {
-        container.innerHTML = `<div class="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-400 font-medium">タスクがありません</div>`;
-        return;
-      }
-      container.innerHTML = filtered.map(task => createTaskCard(task)).join('');
-      lucide.createIcons();
-    }
-
-    function createTaskCard(task) {
-      let dueDateHtml = '';
-      if (task.dueDate) {
-        const s = getTaskStatus(task.dueDate);
-        const color = s === 'overdue' ? 'bg-red-50 text-red-600 border-red-100' : (s === 'today' ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-700 border-green-100');
-        dueDateHtml = `<div class="text-[10px] px-1.5 py-0.5 rounded border font-bold ${color}">${formatDateTime(task.dueDate)}</div>`;
-      }
-      const cat = (categories || []).find(c => c.name === task.category) || { name: '未分類', color: '#999' };
-      return `
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-3 group">
-          <button onclick="completeTask(${task.id})" class="mt-1 w-6 h-6 shrink-0 rounded-full border-2 border-gray-300 flex items-center justify-center text-transparent hover:border-dusty-blue-500 hover:text-dusty-blue-500 transition-colors"><i data-lucide="check" class="w-3.5 h-3.5" stroke-width="4"></i></button>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between gap-2 mb-1">
-              <h3 class="font-bold text-gray-800 break-words leading-tight">${escapeHTML(task.title)}</h3>
-              ${dueDateHtml}
-            </div>
-            <div class="flex items-center gap-1.5 mb-1">
-              <span class="text-[10px] px-2 py-0.5 border rounded-full font-medium" style="background-color: ${cat.color}20; border-color: ${cat.color}40; color: ${cat.color}">${task.category || '未分類'}</span>
-              ${task.type !== 'specific' ? `<span class="text-[10px] px-2 py-0.5 bg-dusty-blue-50 text-dusty-blue-600 rounded-full font-bold">繰り返し</span>` : ''}
-            </div>
-            ${task.memo ? `<div class="text-xs text-gray-500 mt-1 p-2 bg-gray-50 rounded-lg whitespace-pre-wrap">${escapeHTML(task.memo)}</div>` : ''}
-          </div>
-          <div class="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100">
-            <button onclick="openEditModal(${task.id})" class="p-1.5 text-gray-400 hover:text-dusty-blue-600"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-            <button onclick="deleteTask(${task.id})" class="p-1.5 text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-          </div>
-        </div>`;
-    }
-
-    function renderCalendar() {
-      const year = currentDate.getFullYear(), month = currentDate.getMonth();
-      const firstDay = new Date(year, month, 1).getDay();
-      const lastDate = new Date(year, month + 1, 0).getDate();
-      const todayStr = getLocalIsoDateTime().slice(0, 10);
+    function updateAssetChartUI(data) { 
+      if(!data) return;
+      document.getElementById('chart-total-asset').innerText = '¥ ' + data.totalAsset.toLocaleString();
+      const labels = data.items.map(i => i.name);
+      const amounts = data.items.map(i => i.amount);
+      if (assetChartInstance) assetChartInstance.destroy();
+      const ctx = document.getElementById('assetChart').getContext('2d');
+      assetChartInstance = new Chart(ctx, {
+        type: 'doughnut', data: { labels: labels, datasets: [{ data: amounts, backgroundColor: ASSET_COLORS, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4 }] },
+        options: { cutout: '72%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' ' + context.label + ': ¥' + context.raw.toLocaleString(); } } } } }
+      });
       let html = '';
-      
-      for (let i = 0; i < firstDay; i++) html += `<div class="bg-gray-50/50 calendar-cell border-b border-r border-gray-100"></div>`;
-      
-      for (let i = 1; i <= lastDate; i++) {
-        const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-        const dayTasks = (tasks || []).filter(t => t.dueDate && t.dueDate.startsWith(dStr));
-        const isToday = dStr === todayStr;
-        const holidayName = getHolidayName(year, month + 1, i);
-        const dayOfWeek = new Date(year, month, i).getDay();
+      data.items.forEach((item, i) => {
+        let color = ASSET_COLORS[i % ASSET_COLORS.length];
+        html += `<div class="flex justify-between items-center text-sm mb-1.5"><div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full shadow-sm" style="background-color: ${color}"></span><span class="text-stone-600 font-bold">${item.name}</span></div><span class="font-bold text-stone-800 text-base tracking-tight">¥ ${item.amount.toLocaleString()}</span></div>`;
+      });
+      document.getElementById('asset-list').innerHTML = html;
+    }
 
-        let dayColor = 'text-gray-500';
-        if (holidayName || dayOfWeek === 0) dayColor = 'text-red-500';
-        else if (dayOfWeek === 6) dayColor = 'text-blue-500';
-        
+    function storeTimelineData(data) { globalTimeline = data || []; }
+
+    function updateBudgets(data) { 
+      const container = document.getElementById('budget-list');
+      if (!data || data.length === 0) return;
+      let html = '<div class="space-y-3">';
+      data.forEach((item, index) => {
+        let pct = item.budget > 0 ? Math.floor((item.current / item.budget) * 100) : (item.current > 0 ? 100 : 0);
+        let isOver = item.current > item.budget;
+        let colorClass = isOver ? 'bg-red-500' : 'bg-teal-500';
+        let remainingText = isOver ? `<span class="text-red-500 font-bold">¥${(item.current - item.budget).toLocaleString()} オーバー</span>` : `残り ¥${(item.budget - item.current).toLocaleString()}`;
+        html += `<div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden transition-all duration-300"><div class="p-4 cursor-pointer active:bg-stone-50 select-none" onclick="toggleDetails(${index}, '${item.name}')"><div class="flex justify-between items-baseline mb-2"><h2 class="font-bold text-stone-800">${item.name}</h2><span class="text-xs text-stone-500 font-medium">${remainingText}</span></div><div class="w-full bg-stone-100 rounded-full h-2.5 mb-2 overflow-hidden"><div class="${colorClass} h-2.5 rounded-full transition-all duration-1000" style="width: ${Math.min(pct, 100)}%"></div></div><div class="flex justify-between items-center text-[11px] text-stone-400 mt-1"><div><span>使用: ¥${item.current.toLocaleString()}</span><span class="mx-1">/</span><span>予算: ¥${item.budget.toLocaleString()}</span></div><div class="bg-stone-100 p-0.5 rounded text-stone-500"><svg id="icon-${index}" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg></div></div></div><div id="details-${index}" class="hidden bg-stone-50 border-t border-stone-100 p-3 max-h-60 overflow-y-auto"></div></div>`;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function toggleDetails(index, categoryName) { 
+      const detailsDiv = document.getElementById(`details-${index}`);
+      const icon = document.getElementById(`icon-${index}`);
+      if (!detailsDiv.classList.contains('hidden')) { detailsDiv.classList.add('hidden'); icon.classList.remove('rotate-180'); return; }
+      detailsDiv.classList.remove('hidden'); icon.classList.add('rotate-180');
+      const filtered = globalTimeline.filter(t => t.item === categoryName || categoryName.includes(t.item));
+      if (filtered.length === 0) { detailsDiv.innerHTML = '<p class="text-center text-stone-400 text-xs py-3">この項目の明細はありません</p>'; } else {
+        let detailHtml = '<div class="space-y-2">';
+        filtered.forEach(t => {
+          let memoText = t.memo ? `<span class="text-stone-500 text-[10px] truncate max-w-[100px] inline-block align-bottom ml-1">(${t.memo})</span>` : '';
+          let displayCategory = (t.category || '').replace(/^(支出・|収入・)/, '');
+          detailHtml += `<div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-stone-100 shadow-sm"><div class="flex-1 overflow-hidden pr-2"><p class="text-xs font-bold text-stone-700 whitespace-nowrap overflow-hidden text-ellipsis">${t.date} <span class="font-normal text-stone-500 ml-1 text-[10px]">${displayCategory}</span></p><p class="text-[10px] text-stone-500 mt-0.5 truncate">${memoText}</p></div><p class="text-sm font-bold text-stone-800 shrink-0">-¥${t.amount.toLocaleString()}</p></div>`;
+        });
+        detailHtml += '</div>'; detailsDiv.innerHTML = detailHtml;
+      }
+    }
+
+    function initAppSelect(itemsMap) { 
+      const appSelect = document.getElementById('input-app');
+      appSelect.innerHTML = '<option value="">選択してください</option>';
+      
+      // ★エラー防止：もしGASから古い形式（配列）のデータが送られてきてしまった場合の対応
+      if (Array.isArray(itemsMap)) {
+        const defaultApps = ["支出・現金", "支出・Paypay", "支出・口座引落"];
+        defaultApps.forEach(app => {
+          const displayName = app.replace(/^(支出・|収入・)/, '');
+          appSelect.innerHTML += `<option value="${app}">${displayName}</option>`;
+        });
+        // 項目のリストはとりあえず送られてきた配列を使う
+        globalItems = {"支出・現金": itemsMap, "支出・Paypay": itemsMap, "支出・口座引落": itemsMap};
+      } 
+      // 正常な形式（オブジェクト）の場合
+      else if (itemsMap && typeof itemsMap === 'object') {
+        Object.keys(itemsMap).forEach(app => {
+          if (app.includes('カード')) return; 
+          const displayName = app.replace(/^(支出・|収入・)/, '');
+          appSelect.innerHTML += `<option value="${app}">${displayName}</option>`;
+        });
+      }
+      document.getElementById('input-item').innerHTML = '<option value="">支払方法を選択してください</option>';
+    }
+
+    function updateItemOptions() {
+      const appSelect = document.getElementById('input-app');
+      const itemSelect = document.getElementById('input-item');
+      const selectedApp = appSelect.value;
+      
+      itemSelect.innerHTML = '<option value="">選択してください</option>';
+      
+      if (selectedApp && globalItems[selectedApp]) {
+        globalItems[selectedApp].forEach(item => {
+          itemSelect.innerHTML += `<option value="${item}">${item}</option>`;
+        });
+      }
+    }
+
+    function updateIncompleteForms(data) { 
+      const container = document.getElementById('incomplete-container');
+      const badge = document.getElementById('badge-incomplete');
+      badge.innerText = data ? data.length : 0;
+      if (!data || data.length === 0) { container.innerHTML = '<div class="text-center py-6"><p class="text-2xl mb-2">✨</p><p class="text-stone-400 text-sm font-medium">全て確認済みです</p></div>'; return; }
+      
+      let html = '';
+      data.forEach(item => {
+        let optionsHtml = '<option value="">項目を選択</option>';
+        if (item.app && globalItems[item.app]) {
+          globalItems[item.app].forEach(opt => {
+            optionsHtml += `<option value="${opt}">${opt}</option>`;
+          });
+        } else {
+          Object.values(globalItems).flat().filter((x, i, self) => self.indexOf(x) === i).forEach(opt => {
+            optionsHtml += `<option value="${opt}">${opt}</option>`;
+          });
+        }
+
+        let displayApp = item.app ? item.app.replace(/^(支出・|収入・)/, '') : '不明な支払方法';
+
         html += `
-          <div onclick="selectDate('${dStr}')" class="p-1 border-b border-r border-gray-100 calendar-cell hover:bg-dusty-blue-50 cursor-pointer transition-colors overflow-hidden">
-            <div class="flex justify-between items-start">
-              <span class="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${isToday ? 'bg-dusty-blue-500 text-white' : dayColor}">${i}</span>
-              ${holidayName ? `<span class="text-[8px] text-red-400 font-bold truncate">${holidayName}</span>` : ''}
+        <div class="bg-white p-4 rounded-xl border border-red-100 shadow-sm relative" id="inc-form-${item.rowNum}">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <span class="text-xs font-bold text-red-400 block mb-0.5">自動記録データ</span>
+              <span class="text-sm font-bold text-stone-700">${item.date}</span>
             </div>
-            <div class="mt-1 space-y-0.5">
-              ${dayTasks.slice(0, 3).map(t => {
-                const cat = (categories || []).find(c => c.name === t.category) || { color: '#999' };
-                return `<div class="text-[9px] truncate px-1 rounded font-bold" style="background-color: ${cat.color}20; color: ${cat.color}">${escapeHTML(t.title)}</div>`
-              }).join('')}
-              ${dayTasks.length > 3 ? '<div class="text-[8px] text-gray-400 text-center font-bold">...</div>' : ''}
+            <span class="font-bold text-red-600 text-xl tracking-tight">¥ ${item.amount.toLocaleString()}</span>
+          </div>
+          <div class="space-y-3 mb-4">
+            <div class="text-xs font-bold text-stone-500 bg-stone-100 p-1.5 rounded inline-block mb-1">
+              🏷️ ${displayApp}
             </div>
-          </div>`;
+            <select id="inc-item-${item.rowNum}" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm outline-none focus:border-red-400" required>${optionsHtml}</select>
+            <input type="text" id="inc-memo-${item.rowNum}" placeholder="メモ (任意)" class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-sm outline-none focus:border-red-400">
+          </div>
+          <button onclick="submitIncomplete(${item.rowNum})" class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-bold shadow-md transition-all active:scale-95 text-sm">TRUEにして保存</button>
+        </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function showError(error) { alert("エラー:\n" + (error.message || error)); }
+
+    async function submitIncomplete(rowNum) {
+      const item = document.getElementById(`inc-item-${rowNum}`).value;
+      const memo = document.getElementById(`inc-memo-${rowNum}`).value;
+      if (!item) return alert("項目を選択してください");
+
+      const btn = document.querySelector(`#inc-form-${rowNum} button`);
+      btn.innerText = '送信中...';
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+
+      try {
+        await fetchAPI('updateIncompleteRecord', { rowNum, item, memo });
+        await loadAllData(); 
+      } catch (error) {
+        showError(error);
+        btn.innerText = 'TRUEにして保存';
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
       }
-      document.getElementById('calendar-grid').innerHTML = html;
     }
 
-    function selectDate(d) {
-      selectedDateStr = d; renderDayDetailModalContent();
-      const modal = document.getElementById('day-detail-modal');
-      modal.classList.remove('hidden');
-      setTimeout(() => {
-        document.getElementById('day-detail-backdrop').classList.remove('opacity-0');
-        document.getElementById('day-detail-sheet').classList.remove('translate-y-full');
-      }, 10);
-    }
+    async function submitManual(e) {
+      e.preventDefault();
+      const date = document.getElementById('input-date').value;
+      const amount = document.getElementById('input-amount').value;
+      const item = document.getElementById('input-item').value;
+      const app = document.getElementById('input-app').value;
+      const memo = document.getElementById('input-memo').value;
 
-    function closeDayDetailModal() {
-      document.getElementById('day-detail-backdrop').classList.add('opacity-0');
-      document.getElementById('day-detail-sheet').classList.add('translate-y-full');
-      setTimeout(() => { document.getElementById('day-detail-modal').classList.add('hidden'); selectedDateStr = null; }, 300);
-    }
+      if (!item || !app) return alert("支払方法と項目を選択してください");
 
-    function renderDayDetailModalContent() {
-      if (!selectedDateStr) return;
-      const filtered = (tasks || []).filter(t => t.dueDate && t.dueDate.startsWith(selectedDateStr));
-      const dateObj = new Date(selectedDateStr);
-      const days = ['日','月','火','水','木','金','土'];
-      document.getElementById('day-detail-title').textContent = `${dateObj.getMonth() + 1}月${dateObj.getDate()}日(${days[dateObj.getDay()]})`;
-      document.getElementById('day-detail-content').innerHTML = filtered.length ? filtered.map(t => createTaskCard(t)).join('') : '<div class="text-center py-12 text-gray-400 font-medium">予定はありません</div>';
-      lucide.createIcons();
-    }
+      const btn = e.target.querySelector('button');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '送信中...';
+      btn.disabled = true;
 
-    function getHolidayName(y, m, d) {
-      const dateStr = `${m}/${d}`;
-      const fixed = {
-        '1/1': '元日', '2/11': '建国記念の日', '2/23': '天皇誕生日', '4/29': '昭和の日',
-        '5/3': '憲法記念日', '5/4': 'みどりの日', '5/5': 'こどもの日', '8/11': '山の日',
-        '11/3': '文化の日', '11/23': '勤労感謝の日'
-      };
-      if (fixed[dateStr]) return fixed[dateStr];
-
-      // 春分・秋分
-      if (m === 3 && d === Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4))) return '春分の日';
-      if (m === 9 && d === Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4))) return '秋分の日';
-
-      // ハッピーマンデー
-      const dayOfWeek = new Date(y, m - 1, d).getDay();
-      const nthWeek = Math.floor((d - 1) / 7) + 1;
-      if (dayOfWeek === 1) {
-        if (m === 1 && nthWeek === 2) return '成人の日';
-        if (m === 7 && nthWeek === 3) return '海の日';
-        if (m === 9 && nthWeek === 3) return '敬老の日';
-        if (m === 10 && nthWeek === 2) return 'スポーツの日';
+      try {
+        await fetchAPI('addManualRecord', { date, item, amount, app, memo });
+        alert("登録しました！");
+        e.target.reset();
+        document.getElementById('input-date').valueAsDate = new Date();
+        document.getElementById('input-item').innerHTML = '<option value="">支払方法を選択してください</option>'; // 項目プルダウンもリセット
+        await loadAllData(); 
+      } catch (error) {
+        showError(error);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
       }
-      return null;
     }
-
-    function openModalFromCalendar() {
-      if (!selectedDateStr) return;
-      openModal();
-      document.getElementById('task-dueDate').value = `${selectedDateStr}T23:59`;
-    }
-
-    function openModal() {
-      editingTaskId = null;
-      document.getElementById('add-task-form').reset();
-      document.getElementById('modal-title').textContent = '新規タスク';
-      const defaultDate = new Date(); defaultDate.setHours(23, 59, 0, 0);
-      document.getElementById('task-dueDate').value = getLocalIsoDateTime(defaultDate);
-      document.getElementById('add-modal').classList.remove('hidden');
-    }
-
-    function openEditModal(id) {
-      const task = tasks.find(t => t.id === id); if (!task) return;
-      editingTaskId = id;
-      document.getElementById('modal-title').textContent = 'タスクの編集';
-      document.getElementById('task-title').value = task.title || '';
-      document.getElementById('task-category').value = task.category || (categories[0] ? categories[0].name : '');
-      document.getElementById('task-type').value = task.type || 'specific';
-      if (task.dueDate) document.getElementById('task-dueDate').value = task.dueDate.slice(0, 16);
-      document.getElementById('task-memo').value = task.memo || '';
-      document.getElementById('add-modal').classList.remove('hidden');
-    }
-
-    function closeModal() { document.getElementById('add-modal').classList.add('hidden'); }
-    function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderApp(); }
-    function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderApp(); }
-    function getLocalIsoDateTime(d = new Date()) { return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); }
-    function formatDateTime(s) {
-      const d = new Date(s);
-      const days = ['日','月','火','水','木','金','土'];
-      return `${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    }
-    function escapeHTML(s) { return s ? s.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t)) : ''; }
   </script>
 </body>
 </html>
